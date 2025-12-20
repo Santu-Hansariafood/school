@@ -1,20 +1,66 @@
-import { useState } from 'react'
+import { useState, useEffect, useCallback, startTransition } from 'react'
 import { motion } from 'framer-motion'
 import { BookOpen, TrendingUp, Award, X } from 'lucide-react'
-import { results, students } from '@/data/mockData'
+import { useApiClient } from '@/components/providers/ApiClientProvider'
+import { useAuth } from '@/app/providers/AuthProvider'
 
 const Results = ({ role }) => {
-  const [selectedStudent, setSelectedStudent] = useState(role === 'student' ? 'S001' : students[0]?.id)
+  const apiClient = useApiClient()
+  const { user } = useAuth()
+  const [studentsList, setStudentsList] = useState([])
+  const [selectedStudent, setSelectedStudent] = useState('')
+  const [resultsList, setResultsList] = useState([])
   const [editModalOpen, setEditModalOpen] = useState(false)
   const [editingMarks, setEditingMarks] = useState({})
   const [saveSuccess, setSaveSuccess] = useState(false)
   const [saveError, setSaveError] = useState('')
-  const studentResults = results.filter(r => r.studentId === selectedStudent)
+
+  const fetchStudents = useCallback(async () => {
+    try {
+      const res = await apiClient.get('/api/students')
+      const list = res.data || []
+      startTransition(() => {
+        setStudentsList(list)
+      })
+      if (role === 'student') {
+        const byEmail = user?.email ? list.find(s => s.email === user.email) : null
+        startTransition(() => {
+          setSelectedStudent(byEmail?._id || list[0]?._id || '')
+        })
+      } else {
+        startTransition(() => {
+          setSelectedStudent(list[0]?._id || '')
+        })
+      }
+    } catch (error) {
+      console.error('Error loading students for results:', error)
+    }
+  }, [apiClient, role, user])
+
+  const fetchResults = useCallback(async (studentId) => {
+    if (!studentId) return
+    try {
+      const res = await apiClient.get(`/api/results?studentId=${studentId}`)
+      startTransition(() => {
+        setResultsList(res.data || [])
+      })
+    } catch (error) {
+      console.error('Error loading results:', error)
+    }
+  }, [apiClient])
+
+  useEffect(() => {
+    fetchStudents()
+  }, [fetchStudents])
+
+  useEffect(() => {
+    fetchResults(selectedStudent)
+  }, [selectedStudent, fetchResults])
 
   const calculateAverage = () => {
-    if (studentResults.length === 0) return 0
-    const total = studentResults.reduce((sum, r) => sum + r.marks, 0)
-    return (total / studentResults.length).toFixed(1)
+    if (resultsList.length === 0) return 0
+    const total = resultsList.reduce((sum, r) => sum + (r.marks || 0), 0)
+    return (total / resultsList.length).toFixed(1)
   }
 
   const getGrade = (marks) => {
@@ -28,7 +74,7 @@ const Results = ({ role }) => {
 
   const openEditModal = () => {
     const marksData = {}
-    studentResults.forEach(result => {
+    resultsList.forEach(result => {
       marksData[result.subject] = result.marks
     })
     setEditingMarks(marksData)
@@ -46,7 +92,7 @@ const Results = ({ role }) => {
     }
   }
 
-  const saveMarks = () => {
+  const saveMarks = async () => {
     const hasEmptyFields = Object.values(editingMarks).some(mark => mark === '')
     if (hasEmptyFields) {
       setSaveError('Please fill all marks fields')
@@ -59,19 +105,19 @@ const Results = ({ role }) => {
       return
     }
 
-    studentResults.forEach(result => {
-      const newMarks = editingMarks[result.subject]
-      if (newMarks !== undefined) {
-        result.marks = newMarks
-        result.grade = getGrade(newMarks)
-      }
-    })
-
-    setSaveSuccess(true)
-    setTimeout(() => {
-      setSaveSuccess(false)
-      setEditModalOpen(false)
-    }, 2000)
+    try {
+      const records = Object.entries(editingMarks).map(([subject, marks]) => ({ subject, marks }))
+      await apiClient.post('/api/results', { studentId: selectedStudent, records })
+      setSaveSuccess(true)
+      await fetchResults(selectedStudent)
+      setTimeout(() => {
+        setSaveSuccess(false)
+        setEditModalOpen(false)
+      }, 1500)
+    } catch (error) {
+      console.error('Error saving marks:', error)
+      setSaveError('Failed to save marks')
+    }
   }
 
   return (
@@ -80,8 +126,8 @@ const Results = ({ role }) => {
         <h1 className="text-3xl font-bold text-gray-800">Academic Results</h1>
         {role !== 'student' && (
           <select value={selectedStudent} onChange={(e) => setSelectedStudent(e.target.value)} className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
-            {students.map(student => (
-              <option key={student.id} value={student.id}>{student.name}</option>
+            {studentsList.map(student => (
+              <option key={student._id} value={student._id}>{student.name}</option>
             ))}
           </select>
         )}
@@ -101,7 +147,7 @@ const Results = ({ role }) => {
         <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-md p-6 text-white">
           <div className="flex items-center justify-between mb-2">
             <BookOpen className="w-8 h-8" />
-            <span className="text-3xl font-bold">{studentResults.length}</span>
+            <span className="text-3xl font-bold">{resultsList.length}</span>
           </div>
           <p className="text-blue-100">Total Subjects</p>
         </div>
@@ -136,7 +182,7 @@ const Results = ({ role }) => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {studentResults.map((result, i) => (
+                {resultsList.map((result, i) => (
                   <tr key={i} className="hover:bg-gray-50">
                     <td className="px-4 py-3 text-sm font-medium text-gray-800">{result.subject}</td>
                     <td className="px-4 py-3 text-sm text-center text-gray-700">{result.marks}</td>
@@ -197,12 +243,12 @@ const Results = ({ role }) => {
               <div className="mb-4 p-4 bg-blue-50 rounded-lg">
                 <p className="text-sm text-gray-600 mb-1">Student</p>
                 <p className="font-semibold text-gray-800">
-                  {students.find(s => s.id === selectedStudent)?.name}
+                  {studentsList.find(s => s._id === selectedStudent)?.name}
                 </p>
               </div>
 
               <div className="space-y-4">
-                {studentResults.map((result, i) => (
+                {resultsList.map((result, i) => (
                   <div key={i} className="border border-gray-200 rounded-lg p-4 hover:border-blue-400 transition">
                     <div className="flex items-center justify-between mb-3">
                       <label className="text-sm font-semibold text-gray-700">

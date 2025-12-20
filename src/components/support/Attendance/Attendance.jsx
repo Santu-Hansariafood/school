@@ -1,12 +1,42 @@
-import { useState, useMemo } from 'react'
-import { attendanceRecords, students } from '@/data/mockData'
+"use client"
+import { useState, useMemo, useEffect, useCallback } from 'react'
+import { useApiClient } from '@/components/providers/ApiClientProvider'
 import { motion } from 'framer-motion'
 import { Calendar, CheckCircle, XCircle, Clock, ChevronDown, TrendingUp } from 'lucide-react'
 const Attendance = ({ role }) => {
+  const apiClient = useApiClient()
   const currentDate = new Date()
   const [selectedMonth, setSelectedMonth] = useState(`${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`)
-  const [attendanceData, setAttendanceData] = useState(attendanceRecords)
+  const [attendanceData, setAttendanceData] = useState([])
+  const [studentsList, setStudentsList] = useState([])
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
+  const [status, setStatus] = useState({ type: '', message: '' })
+
+  const loadStudents = useCallback(async () => {
+    try {
+      const res = await apiClient.get('/api/students')
+      setStudentsList(res.data || [])
+    } catch (error) {
+      console.error('Error loading students for attendance:', error)
+    }
+  }, [apiClient])
+
+  const loadAttendanceForMonth = useCallback(async (monthKey) => {
+    try {
+      const res = await apiClient.get(`/api/attendance?month=${monthKey}`)
+      setAttendanceData(res.data || [])
+    } catch (error) {
+      console.error('Error loading attendance records:', error)
+    }
+  }, [apiClient])
+
+  useEffect(() => {
+    loadStudents()
+  }, [loadStudents])
+
+  useEffect(() => {
+    loadAttendanceForMonth(selectedMonth)
+  }, [selectedMonth, loadAttendanceForMonth])
 
   const months = useMemo(() => {
     const monthSet = new Set()
@@ -43,20 +73,37 @@ const Attendance = ({ role }) => {
     return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
   }
 
-  const markAttendance = (studentId, status) => {
+  const markAttendance = async (student, attendanceStatus) => {
+    const studentId = student._id
+    const className = student.class
+
     setAttendanceData(prev => {
-      const existingIndex = prev.findIndex(r => r.studentId === studentId && r.date === selectedDate)
+      const existingIndex = prev.findIndex(r => r.studentId === studentId && r.date?.substring(0, 10) === selectedDate)
       if (existingIndex !== -1) {
         const updated = [...prev]
-        updated[existingIndex] = { ...updated[existingIndex], status }
+        updated[existingIndex] = { ...updated[existingIndex], status: attendanceStatus }
         return updated
-      } else {
-        return [...prev, { studentId, date: selectedDate, status }]
       }
+      return [...prev, { studentId, class: className, date: selectedDate, status: attendanceStatus }]
     })
+
+    try {
+      await apiClient.post('/api/attendance', {
+        studentId,
+        class: className,
+        date: selectedDate,
+        status: attendanceStatus,
+      })
+      setStatus({ type: 'success', message: 'Attendance updated' })
+    } catch (error) {
+      console.error('Error updating attendance:', error)
+      setStatus({ type: 'error', message: 'Failed to update attendance' })
+    } finally {
+      setTimeout(() => setStatus({ type: '', message: '' }), 2500)
+    }
   }
 
-  const todayRecords = attendanceData.filter(r => r.date === selectedDate)
+  const todayRecords = attendanceData.filter(r => r.date && r.date.substring(0, 10) === selectedDate)
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="max-w-6xl mx-auto">
@@ -143,6 +190,17 @@ const Attendance = ({ role }) => {
             )}
           </div>
         </div>
+        {status.message && (
+          <div
+            className={`mt-6 mb-2 p-3 rounded-lg text-sm border ${
+              status.type === 'error'
+                ? 'bg-red-50 border-red-300 text-red-700'
+                : 'bg-emerald-50 border-emerald-300 text-emerald-700'
+            }`}
+          >
+            {status.message}
+          </div>
+        )}
         {role !== 'student' && (
           <div className="bg-white rounded-xl shadow-md p-6 mb-6">
             <h2 className="text-xl font-semibold mb-4 text-gray-800">Mark Attendance - {new Date(selectedDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</h2>
@@ -166,22 +224,22 @@ const Attendance = ({ role }) => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {students.map(student => {
-                    const record = todayRecords.find(r => r.studentId === student.id)
+                  {studentsList.map(student => {
+                    const record = todayRecords.find(r => r.studentId === student._id)
                     return (
                       <motion.tr
-                        key={student.id}
+                        key={student._id}
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         className="hover:bg-gray-50 transition"
                       >
-                        <td className="px-4 py-3 text-sm text-gray-700">{student.id}</td>
+                        <td className="px-4 py-3 text-sm text-gray-700">{student._id}</td>
                         <td className="px-4 py-3 text-sm font-medium text-gray-800">{student.name}</td>
                         <td className="px-4 py-3 text-sm text-gray-600">{student.class}</td>
                         <td className="px-4 py-3">
                           <div className="flex items-center justify-center gap-2">
                             <button
-                              onClick={() => markAttendance(student.id, 'present')}
+                              onClick={() => markAttendance(student, 'present')}
                               className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
                                 record?.status === 'present'
                                   ? 'bg-emerald-600 text-white shadow-md'
@@ -191,7 +249,7 @@ const Attendance = ({ role }) => {
                               Present
                             </button>
                             <button
-                              onClick={() => markAttendance(student.id, 'absent')}
+                              onClick={() => markAttendance(student, 'absent')}
                               className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
                                 record?.status === 'absent'
                                   ? 'bg-red-600 text-white shadow-md'
@@ -201,7 +259,7 @@ const Attendance = ({ role }) => {
                               Absent
                             </button>
                             <button
-                              onClick={() => markAttendance(student.id, 'late')}
+                              onClick={() => markAttendance(student, 'late')}
                               className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
                                 record?.status === 'late'
                                   ? 'bg-orange-600 text-white shadow-md'

@@ -17,6 +17,11 @@ const AdminDashboard = ({ user, onLogout }) => {
   const [studentAssignments, setStudentAssignments] = useState([])
   const classes = ['all', ...new Set(students.map(s => s.class))]
 
+  const classOptions = Array.from(new Set([
+    ...students.map(s => s.class),
+    ...teachers.flatMap(t => t.assignedClasses || [])
+  ])).sort()
+
   const RegisterStudent = () => {
     const [formData, setFormData] = useState({
       name: '',
@@ -117,15 +122,15 @@ const AdminDashboard = ({ user, onLogout }) => {
               <div>
                 <h3 className="text-lg font-semibold text-gray-800 mb-4">Academic Information</h3>
                 <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Class *</label>
-                    <select name="class" value={formData.class} onChange={handleChange} required className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                      <option value="">Select Class</option>
-                      {['9-A', '9-B', '10-A', '10-B', '11-A', '11-B', '12-A', '12-B'].map(cls => (
-                        <option key={cls} value={cls}>{cls}</option>
-                      ))}
-                    </select>
-                  </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Class *</label>
+                  <select name="class" value={formData.class} onChange={handleChange} required className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    <option value="">Select Class</option>
+                    {classOptions.map(cls => (
+                      <option key={cls} value={cls}>{cls}</option>
+                    ))}
+                  </select>
+                </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Admission Date *</label>
                     <input type="date" name="admissionDate" value={formData.admissionDate} onChange={handleChange} required className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />

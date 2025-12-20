@@ -20,6 +20,8 @@ export const teachers = [
   { id: 'T004', name: 'Emily White', subject: 'English', email: 'emily@school.com', phone: '+1-555-0204', address: '444 Education Lane, Springfield', dateOfBirth: '1990-06-15', gender: 'Female', experience: '6 Years', assignedClasses: ['9-A'], qualifications: [{ degree: 'M.A. English Literature', institution: 'Arts College', year: '2014' }] }
 ]
 
+export const classes = ['9-A', '9-B', '10-A', '10-B']
+
 export const assignments = [
   { id: 1, title: 'Algebra Problems', subject: 'Mathematics', dueDate: '2024-01-25', status: 'pending', description: 'Solve problems 1-20 from chapter 5', assignedTo: ['S001', 'S002'], createdBy: 'T001', createdAt: '2024-01-15T10:00:00Z' },
   { id: 2, title: 'Newton Laws Essay', subject: 'Physics', dueDate: '2024-01-28', status: 'pending', description: 'Write an essay on Newton three laws of motion', assignedTo: ['S001', 'S002', 'S005', 'S006'], createdBy: 'T002', createdAt: '2024-01-16T09:30:00Z' },

@@ -1,10 +1,12 @@
-import { useState } from 'react'
+"use client"
+import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { FileText, Plus, Upload, CheckCircle, Clock, Users, X, Check } from 'lucide-react'
-import { assignments as initialAssignments, students, teachers } from '@/data/mockData'
+import { useApiClient } from '@/components/providers/ApiClientProvider'
 
 const Assignments = ({ role, userId }) => {
-  const [assignmentList, setAssignmentList] = useState(initialAssignments)
+  const apiClient = useApiClient()
+  const [assignmentList, setAssignmentList] = useState([])
   const [showForm, setShowForm] = useState(false)
   const [currentStep, setCurrentStep] = useState(1)
   const [newAssignment, setNewAssignment] = useState({ 
@@ -13,18 +15,45 @@ const Assignments = ({ role, userId }) => {
     dueDate: '', 
     description: '',
     assignedTo: [],
-    createdBy: userId || 'T001'
+    createdBy: userId || ''
   })
   const [selectedClass, setSelectedClass] = useState('all')
   const [selectedStudents, setSelectedStudents] = useState([])
+  const [studentsList, setStudentsList] = useState([])
+  const [status, setStatus] = useState({ type: '', message: '' })
+  const [submissionUrl, setSubmissionUrl] = useState('')
 
-  const currentTeacher = teachers.find(t => t.id === (userId || 'T001'))
-  const teacherClasses = currentTeacher?.assignedClasses || ['10-A', '10-B', '9-A']
-  const availableClasses = ['all', ...teacherClasses]
+  const loadStudents = useCallback(async () => {
+    try {
+      const res = await apiClient.get('/api/students')
+      setStudentsList(res.data || [])
+    } catch (error) {
+      console.error('Error loading students:', error)
+    }
+  }, [apiClient])
+
+  const loadAssignments = useCallback(async () => {
+    try {
+      const params = new URLSearchParams()
+      if (role === 'student' && userId) params.set('studentId', userId)
+      params.set('withCounts', 'true')
+      const res = await apiClient.get(`/api/assignments?${params.toString()}`)
+      setAssignmentList(res.data || [])
+    } catch (error) {
+      console.error('Error loading assignments:', error)
+    }
+  }, [apiClient, role, userId])
+
+  useEffect(() => {
+    loadStudents()
+    loadAssignments()
+  }, [loadStudents, loadAssignments])
+
+  const availableClasses = ['all', ...new Set(studentsList.map(s => s.class))]
 
   const filteredStudents = selectedClass === 'all' 
-    ? students.filter(s => teacherClasses.includes(s.class))
-    : students.filter(s => s.class === selectedClass)
+    ? studentsList
+    : studentsList.filter(s => s.class === selectedClass)
 
   const handleNextStep = () => {
     if (newAssignment.title && newAssignment.subject && newAssignment.dueDate) {
@@ -41,7 +70,7 @@ const Assignments = ({ role, userId }) => {
   }
 
   const handleSelectAllClass = () => {
-    const classStudentIds = filteredStudents.map(s => s.id)
+    const classStudentIds = filteredStudents.map(s => s._id)
     const allSelected = classStudentIds.every(id => selectedStudents.includes(id))
     
     if (allSelected) {
@@ -51,17 +80,23 @@ const Assignments = ({ role, userId }) => {
     }
   }
 
-  const handleCreate = () => {
-    if (selectedStudents.length > 0) {
-      const assignment = {
-        id: assignmentList.length + 1,
+  const handleCreate = async () => {
+    if (selectedStudents.length === 0) return
+    try {
+      const payload = {
         ...newAssignment,
         assignedTo: selectedStudents,
-        status: 'pending',
-        createdAt: new Date().toISOString()
+        class: selectedClass === 'all' ? undefined : selectedClass,
       }
-      setAssignmentList([...assignmentList, assignment])
+      const res = await apiClient.post('/api/assignments', payload)
+      setAssignmentList(prev => [res.data, ...prev])
       resetForm()
+      setStatus({ type: 'success', message: 'Assignment created' })
+    } catch (error) {
+      console.error('Error creating assignment:', error)
+      setStatus({ type: 'error', message: 'Failed to create assignment' })
+    } finally {
+      setTimeout(() => setStatus({ type: '', message: '' }), 2500)
     }
   }
 
@@ -72,7 +107,7 @@ const Assignments = ({ role, userId }) => {
       dueDate: '', 
       description: '',
       assignedTo: [],
-      createdBy: userId || 'T001'
+      createdBy: userId || ''
     })
     setSelectedStudents([])
     setSelectedClass('all')
@@ -80,8 +115,21 @@ const Assignments = ({ role, userId }) => {
     setShowForm(false)
   }
 
-  const handleSubmit = (id) => {
-    setAssignmentList(prev => prev.map(a => a.id === id ? { ...a, status: 'submitted' } : a))
+  const handleSubmit = async (assignment) => {
+    try {
+      await apiClient.post(`/api/assignments/${assignment._id}/submissions`, {
+        studentId: userId,
+        fileUrl: submissionUrl || '',
+      })
+      setStatus({ type: 'success', message: 'Assignment submitted' })
+      setSubmissionUrl('')
+      setAssignmentList(prev => prev.map(a => a._id === assignment._id ? { ...a, submittedCount: (a.submittedCount || 0) + 1 } : a))
+    } catch (error) {
+      console.error('Error submitting assignment:', error)
+      setStatus({ type: 'error', message: 'Failed to submit assignment' })
+    } finally {
+      setTimeout(() => setStatus({ type: '', message: '' }), 2500)
+    }
   }
 
   const getAssignedCount = (assignment) => {
@@ -102,6 +150,11 @@ const Assignments = ({ role, userId }) => {
           </button>
         )}
       </div>
+      {status.message && (
+        <div className={`mb-6 p-3 rounded-lg text-sm border ${status.type === 'error' ? 'bg-red-50 border-red-300 text-red-700' : 'bg-emerald-50 border-emerald-300 text-emerald-700'}`}>
+          {status.message}
+        </div>
+      )}
 
       <AnimatePresence>
         {showForm && role === 'teacher' && (
@@ -236,20 +289,20 @@ const Assignments = ({ role, userId }) => {
                   <div className="divide-y divide-gray-200">
                     {filteredStudents.map(student => (
                       <label 
-                        key={student.id}
+                        key={student._id}
                         className="flex items-center p-4 hover:bg-gray-50 cursor-pointer transition"
                       >
                         <input
                           type="checkbox"
-                          checked={selectedStudents.includes(student.id)}
-                          onChange={() => handleStudentToggle(student.id)}
+                          checked={selectedStudents.includes(student._id)}
+                          onChange={() => handleStudentToggle(student._id)}
                           className="w-5 h-5 text-blue-600 rounded border-gray-300 focus:ring-2 focus:ring-blue-500"
                         />
                         <div className="ml-4 flex-1">
                           <p className="font-medium text-gray-800">{student.name}</p>
                           <p className="text-sm text-gray-600">Class {student.class} • {student.email}</p>
                         </div>
-                        {selectedStudents.includes(student.id) && (
+                        {selectedStudents.includes(student._id) && (
                           <Check className="w-5 h-5 text-green-600" />
                         )}
                       </label>
@@ -287,7 +340,7 @@ const Assignments = ({ role, userId }) => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {assignmentList.map(assignment => (
           <motion.div 
-            key={assignment.id} 
+            key={assignment._id || assignment.id} 
             initial={{ opacity: 0, scale: 0.95 }} 
             animate={{ opacity: 1, scale: 1 }} 
             whileHover={{ scale: 1.02 }} 
@@ -297,21 +350,6 @@ const Assignments = ({ role, userId }) => {
               <div className="p-3 bg-blue-100 rounded-lg">
                 <FileText className="w-6 h-6 text-blue-600" />
               </div>
-              <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                assignment.status === 'submitted' 
-                  ? 'bg-emerald-100 text-emerald-700' 
-                  : 'bg-orange-100 text-orange-700'
-              }`}>
-                {assignment.status === 'submitted' ? (
-                  <span className="flex items-center gap-1">
-                    <CheckCircle className="w-3 h-3" />Submitted
-                  </span>
-                ) : (
-                  <span className="flex items-center gap-1">
-                    <Clock className="w-3 h-3" />Pending
-                  </span>
-                )}
-              </span>
             </div>
             <h3 className="text-lg font-semibold text-gray-800 mb-2">{assignment.title}</h3>
             <p className="text-sm text-gray-600 mb-1">{assignment.subject}</p>
@@ -319,20 +357,29 @@ const Assignments = ({ role, userId }) => {
             {assignment.description && (
               <p className="text-sm text-gray-600 mb-4 line-clamp-2">{assignment.description}</p>
             )}
-            {role === 'teacher' && assignment.assignedTo && (
+            {role !== 'student' && (
               <div className="flex items-center gap-2 text-sm text-gray-600 mb-4 pt-3 border-t border-gray-100">
                 <Users className="w-4 h-4" />
-                <span>{getAssignedCount(assignment)} student{getAssignedCount(assignment) !== 1 ? 's' : ''} assigned</span>
+                <span>{(assignment.assignedTo?.length || 0)} assigned · {(assignment.submittedCount || 0)} submitted</span>
               </div>
             )}
-            {role === 'student' && assignment.status === 'pending' && (
-              <button 
-                onClick={() => handleSubmit(assignment.id)} 
-                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium"
-              >
-                <Upload className="w-4 h-4" />
-                Submit Assignment
-              </button>
+            {role === 'student' && (
+              <div className="space-y-3">
+                <input 
+                  type="url"
+                  value={submissionUrl}
+                  onChange={(e) => setSubmissionUrl(e.target.value)}
+                  placeholder="Submission URL (optional)"
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+                />
+                <button 
+                  onClick={() => handleSubmit(assignment)} 
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium"
+                >
+                  <Upload className="w-4 h-4" />
+                  Submit Assignment
+                </button>
+              </div>
             )}
           </motion.div>
         ))}

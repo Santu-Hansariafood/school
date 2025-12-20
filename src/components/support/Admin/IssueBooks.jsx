@@ -1,48 +1,71 @@
-import { useState } from 'react'
+import { useState, useEffect, useCallback, startTransition } from 'react'
 import { motion } from 'framer-motion'
 import { BookPlus } from 'lucide-react'
-import { students, libraryBooks, bookIssuanceRecords } from '@/data/mockData'
+import { useApiClient } from '@/components/providers/ApiClientProvider'
 
 const IssueBooks = () => {
+  const apiClient = useApiClient()
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedStudent, setSelectedStudent] = useState(null)
   const [selectedBook, setSelectedBook] = useState(null)
   const [dueDate, setDueDate] = useState('')
   const [issued, setIssued] = useState(false)
 
-  const availableBooks = libraryBooks.filter(book => book.status === 'available')
-  const filteredStudents = students.filter(s =>
+  const [studentsList, setStudentsList] = useState([])
+  const [availableBooks, setAvailableBooks] = useState([])
+
+  const loadStudents = useCallback(async () => {
+    try {
+      const res = await apiClient.get('/api/students')
+      startTransition(() => {
+        setStudentsList(res.data || [])
+      })
+    } catch (error) {
+      console.error('Error loading students:', error)
+    }
+  }, [apiClient])
+
+  const loadAvailableBooks = useCallback(async () => {
+    try {
+      const res = await apiClient.get('/api/library/books?status=available')
+      startTransition(() => {
+        setAvailableBooks(res.data || [])
+      })
+    } catch (error) {
+      console.error('Error loading books:', error)
+    }
+  }, [apiClient])
+
+  useEffect(() => {
+    loadStudents()
+    loadAvailableBooks()
+  }, [loadStudents, loadAvailableBooks])
+
+  const filteredStudents = studentsList.filter(s =>
     s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    s.id.toLowerCase().includes(searchTerm.toLowerCase())
+    s.email.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
-  const handleIssue = () => {
+  const handleIssue = async () => {
     if (selectedStudent && selectedBook && dueDate) {
-      const issuanceRecord = {
-        id: `ISS${String(bookIssuanceRecords.length + 1).padStart(3, '0')}`,
-        bookId: selectedBook.id,
-        studentId: selectedStudent.id,
-        issuedDate: new Date().toISOString().split('T')[0],
-        dueDate: dueDate,
-        status: 'issued'
+      try {
+        await apiClient.post('/api/library/issuances', {
+          bookId: selectedBook._id,
+          studentId: selectedStudent._id,
+          dueDate
+        })
+        setIssued(true)
+        await loadAvailableBooks()
+        setTimeout(() => {
+          setIssued(false)
+          setSelectedStudent(null)
+          setSelectedBook(null)
+          setDueDate('')
+          setSearchTerm('')
+        }, 3000)
+      } catch (error) {
+        console.error('Error issuing book:', error)
       }
-      bookIssuanceRecords.push(issuanceRecord)
-
-      const book = libraryBooks.find(b => b.id === selectedBook.id)
-      if (book) {
-        book.status = 'issued'
-        book.issuedTo = selectedStudent.id
-        book.dueDate = dueDate
-      }
-
-      setIssued(true)
-      setTimeout(() => {
-        setIssued(false)
-        setSelectedStudent(null)
-        setSelectedBook(null)
-        setDueDate('')
-        setSearchTerm('')
-      }, 3000)
     }
   }
 
@@ -62,11 +85,11 @@ const IssueBooks = () => {
             <input type="text" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="Search by name or ID..." className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent mb-4" />
             <div className="space-y-2 max-h-96 overflow-y-auto">
               {filteredStudents.map(student => (
-                <motion.div key={student.id} whileHover={{ scale: 1.02 }} onClick={() => setSelectedStudent(student)} className={`p-3 border rounded-lg cursor-pointer transition ${
-                  selectedStudent?.id === student.id ? 'border-blue-600 bg-blue-50' : 'border-gray-200 hover:border-blue-400'
+                <motion.div key={student._id} whileHover={{ scale: 1.02 }} onClick={() => setSelectedStudent(student)} className={`p-3 border rounded-lg cursor-pointer transition ${
+                  selectedStudent?._id === student._id ? 'border-blue-600 bg-blue-50' : 'border-gray-200 hover:border-blue-400'
                 }`}>
                   <p className="font-semibold text-gray-800">{student.name}</p>
-                  <p className="text-sm text-gray-600">{student.id} - {student.class}</p>
+                  <p className="text-sm text-gray-600">{student.email} - {student.class}</p>
                 </motion.div>
               ))}
             </div>
@@ -78,12 +101,12 @@ const IssueBooks = () => {
             <h2 className="text-xl font-semibold mb-4 text-gray-800">Available Books ({availableBooks.length})</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-96 overflow-y-auto">
               {availableBooks.map(book => (
-                <motion.div key={book.id} whileHover={{ scale: 1.02 }} onClick={() => setSelectedBook(book)} className={`p-4 border rounded-lg cursor-pointer transition ${
-                  selectedBook?.id === book.id ? 'border-blue-600 bg-blue-50' : 'border-gray-200 hover:border-blue-400'
+                <motion.div key={book._id} whileHover={{ scale: 1.02 }} onClick={() => setSelectedBook(book)} className={`p-4 border rounded-lg cursor-pointer transition ${
+                  selectedBook?._id === book._id ? 'border-blue-600 bg-blue-50' : 'border-gray-200 hover:border-blue-400'
                 }`}>
                   <p className="font-semibold text-gray-800">{book.title}</p>
                   <p className="text-sm text-gray-600 mt-1">{book.author}</p>
-                  <p className="text-xs text-gray-500 mt-1">ID: {book.id}</p>
+                  <p className="text-xs text-gray-500 mt-1">ID: {book._id}</p>
                 </motion.div>
               ))}
             </div>
@@ -95,7 +118,7 @@ const IssueBooks = () => {
               <div className="space-y-4">
                 <div className="p-4 bg-blue-50 rounded-lg">
                   <p className="text-sm text-gray-600 mb-1">Student</p>
-                  <p className="font-semibold text-gray-800">{selectedStudent.name} ({selectedStudent.id})</p>
+                  <p className="font-semibold text-gray-800">{selectedStudent.name} ({selectedStudent.email})</p>
                 </div>
                 <div className="p-4 bg-emerald-50 rounded-lg">
                   <p className="text-sm text-gray-600 mb-1">Book</p>
@@ -120,4 +143,3 @@ const IssueBooks = () => {
 }
 
 export default IssueBooks
-

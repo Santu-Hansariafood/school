@@ -3,7 +3,7 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/app/providers/AuthProvider"
 import Sidebar from "@/components/common/Sidebar/Sidebar"
-import { Calendar, FileText, BookOpen, BarChart3 } from "lucide-react"
+import { Calendar, FileText, BookOpen, BarChart3, Users } from "lucide-react"
 
 export default function TeacherLayout({ children }) {
   const { user, logout } = useAuth()
@@ -16,6 +16,7 @@ export default function TeacherLayout({ children }) {
 
   const menuItems = [
     { icon: BarChart3, label: "Overview", path: "/teacher" },
+    { icon: Users, label: "Classes", path: "/teacher/classes" },
     { icon: Calendar, label: "Attendance", path: "/teacher/attendance" },
     { icon: FileText, label: "Assignments", path: "/teacher/assignments" },
     { icon: BookOpen, label: "Results", path: "/teacher/results" }

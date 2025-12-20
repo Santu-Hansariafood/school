@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { GraduationCap, User, Lock, Mail, ArrowLeft, CheckCircle, Loader2 } from 'lucide-react'
-import { users } from '@/data/mockData'
+import { createApiClient } from '@/lib/axiosInstance'
 
-const Login = ({ onLogin }) => {
+const Login = ({ onLogin, apiKey }) => {
   const [credentials, setCredentials] = useState({ username: '', password: '' })
   const [error, setError] = useState('')
   const [showReset, setShowReset] = useState(false)
@@ -17,15 +17,16 @@ const Login = ({ onLogin }) => {
     e.preventDefault()
     setIsLoading(true)
     setError('')
-
-    // Simulate API call delay for loading animation
-    await new Promise(resolve => setTimeout(resolve, 1500))
-
-    const user = users.find(u => u.username === credentials.username && u.password === credentials.password)
-    if (user) {
+    try {
+      const api = createApiClient(apiKey)
+      const res = await api.post('/api/auth/login', {
+        username: credentials.username,
+        password: credentials.password
+      })
+      const { user } = res.data
       onLogin(user)
-    } else {
-      setError('Invalid credentials')
+    } catch (err) {
+      setError(err?.response?.data?.message || 'Login failed')
       setIsLoading(false)
     }
   }
@@ -45,30 +46,16 @@ const Login = ({ onLogin }) => {
     setResetStatus(null)
     setTempPassword('')
 
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 1500))
-
+    await new Promise(resolve => setTimeout(resolve, 1000))
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRegex.test(resetEmail)) {
       setResetStatus({ type: 'error', message: 'Please enter a valid email address' })
       setIsLoading(false)
       return
     }
-
-    const user = users.find(u => u.email === resetEmail)
-    if (user) {
-      const newPassword = generateTempPassword()
-      setTempPassword(newPassword)
-      setResetStatus({
-        type: 'success',
-        message: `Password reset successful! Your temporary password has been generated.`
-      })
-    } else {
-      setResetStatus({
-        type: 'error',
-        message: 'No account found with this email address'
-      })
-    }
+    const newPassword = generateTempPassword()
+    setTempPassword(newPassword)
+    setResetStatus({ type: 'success', message: 'If the email exists, a reset link has been sent.' })
     setIsLoading(false)
   }
 

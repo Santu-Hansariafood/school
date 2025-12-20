@@ -1,10 +1,18 @@
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
-import { UserPlus } from 'lucide-react'
-import { teachers, registeredTeachers } from '@/data/mockData'
+import { UserPlus, Edit, Trash2 } from 'lucide-react'
+import { useApiClient } from '@/components/providers/ApiClientProvider'
+import { students as mockStudents, teachers as mockTeachers } from '@/data/mockData'
 
 const RegisterTeacher = () => {
-  const [formData, setFormData] = useState({
+  const apiClient = useApiClient()
+  const [teachersList, setTeachersList] = useState([])
+  const [isLoading, setIsLoading] = useState(false)
+  const [isEditing, setIsEditing] = useState(false)
+  const [editId, setEditId] = useState(null)
+  const [status, setStatus] = useState({ type: '', message: '' })
+
+  const initialFormState = {
     name: '',
     subject: '',
     email: '',
@@ -15,20 +23,25 @@ const RegisterTeacher = () => {
     experience: '',
     assignedClasses: [],
     qualifications: [{ degree: '', institution: '', year: '' }]
-  })
-  const [submitted, setSubmitted] = useState(false)
+  }
+
+  const [formData, setFormData] = useState(initialFormState)
+
+  const fetchTeachers = useCallback(async () => {
+    try {
+      const response = await apiClient.get('/api/teachers')
+      setTeachersList(response.data)
+    } catch (error) {
+      console.error('Error fetching teachers:', error)
+    }
+  }, [apiClient])
+
+  useEffect(() => {
+    fetchTeachers()
+  }, [fetchTeachers])
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value })
-  }
-
-  const handleClassSelection = (cls) => {
-    setFormData(prev => ({
-      ...prev,
-      assignedClasses: prev.assignedClasses.includes(cls)
-        ? prev.assignedClasses.filter(c => c !== cls)
-        : [...prev.assignedClasses, cls]
-    }))
   }
 
   const handleQualificationChange = (index, field, value) => {
@@ -51,42 +64,92 @@ const RegisterTeacher = () => {
     })
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    const newTeacher = {
-      id: `T${String(teachers.length + 1).padStart(3, '0')}`,
-      ...formData,
-      registeredAt: new Date().toISOString()
+    setIsLoading(true)
+    setStatus({ type: '', message: '' })
+
+    try {
+      if (isEditing) {
+        await apiClient.put(`/api/teachers/${editId}`, formData)
+        setStatus({ type: 'success', message: 'Teacher updated successfully!' })
+      } else {
+        await apiClient.post('/api/teachers', formData)
+        setStatus({ type: 'success', message: 'Teacher registered successfully!' })
+      }
+      
+      setFormData(initialFormState)
+      setIsEditing(false)
+      setEditId(null)
+      fetchTeachers()
+    } catch (error) {
+      console.error('Error saving teacher:', error)
+      setStatus({ type: 'error', message: error.response?.data?.message || 'Something went wrong' })
+    } finally {
+      setIsLoading(false)
+      setTimeout(() => setStatus({ type: '', message: '' }), 3000)
     }
-    registeredTeachers.push(newTeacher)
-    setSubmitted(true)
-    setTimeout(() => {
-      setSubmitted(false)
-      setFormData({
-        name: '',
-        subject: '',
-        email: '',
-        phone: '',
-        address: '',
-        dateOfBirth: '',
-        gender: '',
-        experience: '',
-        assignedClasses: [],
-        qualifications: [{ degree: '', institution: '', year: '' }]
-      })
-    }, 3000)
   }
+
+  const handleEdit = (teacher) => {
+    setFormData({
+      name: teacher.name,
+      subject: teacher.subject,
+      email: teacher.email,
+      phone: teacher.phone,
+      address: teacher.address,
+      dateOfBirth: teacher.dateOfBirth ? teacher.dateOfBirth.split('T')[0] : '',
+      gender: teacher.gender,
+      experience: teacher.experience,
+      assignedClasses: teacher.assignedClasses || [],
+      qualifications: teacher.qualifications && teacher.qualifications.length > 0 
+        ? teacher.qualifications 
+        : [{ degree: '', institution: '', year: '' }]
+    })
+    setIsEditing(true)
+    setEditId(teacher._id)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this teacher?')) return
+
+    try {
+      await apiClient.delete(`/api/teachers/${id}`)
+      fetchTeachers()
+      setStatus({ type: 'success', message: 'Teacher deleted successfully!' })
+    } catch (error) {
+      console.error('Error deleting teacher:', error)
+      setStatus({ type: 'error', message: 'Failed to delete teacher' })
+    } finally {
+      setTimeout(() => setStatus({ type: '', message: '' }), 3000)
+    }
+  }
+
+  const classOptions = Array.from(new Set([
+    ...mockStudents.map(s => s.class),
+    ...mockTeachers.flatMap(t => t.assignedClasses || [])
+  ])).sort()
 
   return (
     <div>
-      <h1 className="text-3xl font-bold text-gray-800 mb-6">Register New Teacher</h1>
-      {submitted && (
-        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="mb-6 p-4 bg-emerald-100 border border-emerald-400 text-emerald-700 rounded-lg">
-          Teacher registered successfully! ID: {`T${String(teachers.length + 1).padStart(3, '0')}`}
+      <h1 className="text-3xl font-bold text-gray-800 mb-6">
+        {isEditing ? 'Edit Teacher' : 'Register New Teacher'}
+      </h1>
+      
+      {status.message && (
+        <motion.div 
+          initial={{ opacity: 0, y: -20 }} 
+          animate={{ opacity: 1, y: 0 }} 
+          className={`mb-6 p-4 border rounded-lg ${
+            status.type === 'error' ? 'bg-red-100 border-red-400 text-red-700' : 'bg-emerald-100 border-emerald-400 text-emerald-700'
+          }`}
+        >
+          {status.message}
         </motion.div>
       )}
 
-      <div className="bg-white rounded-xl shadow-md p-6">
+      <div className="bg-white rounded-xl shadow-md p-6 mb-8">
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
@@ -137,14 +200,20 @@ const RegisterTeacher = () => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Assigned Classes</label>
-                  <div className="grid grid-cols-2 gap-2 mt-2">
-                    {['9-A', '9-B', '10-A', '10-B', '11-A', '11-B', '12-A', '12-B'].map(cls => (
-                      <label key={cls} className="flex items-center gap-2 p-2 border border-gray-300 rounded-lg cursor-pointer hover:bg-blue-50">
-                        <input type="checkbox" checked={formData.assignedClasses.includes(cls)} onChange={() => handleClassSelection(cls)} className="w-4 h-4 text-blue-600" />
-                        <span className="text-sm">{cls}</span>
-                      </label>
+                  <select
+                    multiple
+                    value={formData.assignedClasses}
+                    onChange={(e) => {
+                      const values = Array.from(e.target.selectedOptions).map(o => o.value)
+                      setFormData({ ...formData, assignedClasses: values })
+                    }}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent min-h-32"
+                  >
+                    {classOptions.map(cls => (
+                      <option key={cls} value={cls}>{cls}</option>
                     ))}
-                  </div>
+                  </select>
+                  <p className="text-xs text-gray-500 mt-1">Hold Ctrl/Cmd to select multiple classes</p>
                 </div>
               </div>
 
@@ -175,30 +244,76 @@ const RegisterTeacher = () => {
           </div>
 
           <div className="flex justify-end gap-4 pt-4 border-t border-gray-200">
-            <button type="button" onClick={() => setFormData({
-              name: '',
-              subject: '',
-              email: '',
-              phone: '',
-              address: '',
-              dateOfBirth: '',
-              gender: '',
-              experience: '',
-              assignedClasses: [],
-              qualifications: [{ degree: '', institution: '', year: '' }]
-            })} className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition">
-              Reset
+            <button type="button" onClick={() => {
+              setFormData(initialFormState)
+              setIsEditing(false)
+              setEditId(null)
+            }} className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition">
+              Cancel
             </button>
-            <button type="submit" className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center gap-2">
-              <UserPlus className="w-5 h-5" />
-              Register Teacher
+            <button type="submit" disabled={isLoading} className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center gap-2">
+              {isLoading ? 'Saving...' : (isEditing ? 'Update Teacher' : 'Register Teacher')}
+              {!isLoading && <UserPlus className="w-5 h-5" />}
             </button>
           </div>
         </form>
+      </div>
+
+      {/* List of Registered Teachers */}
+      <div className="bg-white rounded-xl shadow-md p-6">
+        <h2 className="text-2xl font-bold text-gray-800 mb-4">Registered Teachers</h2>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-gray-50 border-b">
+                <th className="p-3 font-semibold text-gray-700">Name</th>
+                <th className="p-3 font-semibold text-gray-700">Subject</th>
+                <th className="p-3 font-semibold text-gray-700">Email</th>
+                <th className="p-3 font-semibold text-gray-700">Classes</th>
+                <th className="p-3 font-semibold text-gray-700">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {teachersList.length === 0 ? (
+                <tr>
+                  <td colSpan="5" className="p-4 text-center text-gray-500">No teachers found.</td>
+                </tr>
+              ) : (
+                teachersList.map(teacher => (
+                  <tr key={teacher._id} className="border-b hover:bg-gray-50">
+                    <td className="p-3">{teacher.name}</td>
+                    <td className="p-3">{teacher.subject}</td>
+                    <td className="p-3">{teacher.email}</td>
+                    <td className="p-3">
+                      {teacher.assignedClasses?.length > 0 
+                        ? teacher.assignedClasses.join(', ') 
+                        : 'None'}
+                    </td>
+                    <td className="p-3 flex gap-2">
+                      <button 
+                        onClick={() => handleEdit(teacher)}
+                        className="p-1 text-blue-600 hover:bg-blue-50 rounded"
+                        title="Edit"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </button>
+                      <button 
+                        onClick={() => handleDelete(teacher._id)}
+                        className="p-1 text-red-600 hover:bg-red-50 rounded"
+                        title="Delete"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   )
 }
 
 export default RegisterTeacher
-
