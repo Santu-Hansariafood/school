@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { UserPlus, Edit, Trash2 } from 'lucide-react'
 import { useApiClient } from '@/components/providers/ApiClientProvider'
@@ -27,18 +27,18 @@ const RegisterTeacher = () => {
 
   const [formData, setFormData] = useState(initialFormState)
 
-  const fetchTeachers = useCallback(async () => {
+  useEffect(() => {
+    fetchTeachers()
+  }, [])
+
+  const fetchTeachers = async () => {
     try {
       const response = await apiClient.get('/api/teachers')
       setTeachersList(response.data)
     } catch (error) {
       console.error('Error fetching teachers:', error)
     }
-  }, [apiClient])
-
-  useEffect(() => {
-    fetchTeachers()
-  }, [fetchTeachers])
+  }
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value })

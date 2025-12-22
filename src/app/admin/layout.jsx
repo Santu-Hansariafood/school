@@ -3,7 +3,7 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/app/providers/AuthProvider"
 import Sidebar from "@/components/common/Sidebar/Sidebar"
-import { Calendar, FileText, BookOpen, DollarSign, BarChart3, Users } from "lucide-react"
+import { Calendar, FileText, BookOpen, DollarSign, BarChart3 } from "lucide-react"
 
 export default function AdminLayout({ children }) {
   const { user, logout } = useAuth()
@@ -16,7 +16,6 @@ export default function AdminLayout({ children }) {
 
   const menuItems = [
     { icon: BarChart3, label: "Overview", path: "/admin" },
-    { icon: Users, label: "Classes", path: "/admin/classes" },
     { icon: Calendar, label: "Attendance", path: "/admin/attendance" },
     { icon: FileText, label: "Assignments", path: "/admin/assignments" },
     { icon: BookOpen, label: "Results", path: "/admin/results" },
