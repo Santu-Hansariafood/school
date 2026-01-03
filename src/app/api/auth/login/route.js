@@ -17,6 +17,21 @@ export async function POST(request) {
       return NextResponse.json({ message: "Username and password are required" }, { status: 400 })
     }
 
+    // Check for demo admin credentials
+    const demoUsername = process.env.ADMIN_DEMO_USERNAME
+    const demoPassword = process.env.ADMIN_DEMO_PASSWORD
+
+    if (demoUsername && demoPassword && username === demoUsername && password === demoPassword) {
+       const demoUser = {
+        id: "demo-admin-id",
+        username: demoUsername,
+        name: "Demo Admin",
+        role: "admin",
+        email: "admin@school.com"
+      }
+      return NextResponse.json({ user: demoUser }, { status: 200 })
+    }
+
     await connectDB()
 
     const user = await User.findOne({ username }).lean()
