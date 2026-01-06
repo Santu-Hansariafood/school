@@ -1,7 +1,6 @@
 "use client"
 import RegisterStudent from "@/components/support/Admin/RegisterStudent"
 
-export default function AdminRegisterStudent() {
+export default function RegisterStudentPage() {
   return <RegisterStudent />
 }
-

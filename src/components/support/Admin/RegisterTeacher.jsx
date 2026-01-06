@@ -26,9 +26,26 @@ const RegisterTeacher = () => {
   }
 
   const [formData, setFormData] = useState(initialFormState)
+  const [classOptions, setClassOptions] = useState([])
 
   useEffect(() => {
     fetchTeachers()
+    const fetchClasses = async () => {
+      try {
+        const res = await apiClient.get('/api/classes')
+        const names = (res.data || []).map(c => c.name)
+        setClassOptions(names.length > 0 ? names : Array.from(new Set([
+          ...mockStudents.map(s => s.class),
+          ...mockTeachers.flatMap(t => t.assignedClasses || [])
+        ])).sort())
+      } catch {
+        setClassOptions(Array.from(new Set([
+          ...mockStudents.map(s => s.class),
+          ...mockTeachers.flatMap(t => t.assignedClasses || [])
+        ])).sort())
+      }
+    }
+    fetchClasses()
   }, [])
 
   const fetchTeachers = async () => {
@@ -126,10 +143,7 @@ const RegisterTeacher = () => {
     }
   }
 
-  const classOptions = Array.from(new Set([
-    ...mockStudents.map(s => s.class),
-    ...mockTeachers.flatMap(t => t.assignedClasses || [])
-  ])).sort()
+  
 
   return (
     <div>

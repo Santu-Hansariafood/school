@@ -200,7 +200,7 @@ const Login = ({ onLogin, apiKey }) => {
                     variants={itemVariants}
                     className="bg-gray-50 rounded-lg p-2"
                   >
-                    <span className="font-semibold text-gray-800">Admin:</span> admin / admin123
+                    <span className="font-semibold text-gray-800">Admin:</span> admin@school.com / admin123
                   </motion.p>
                   <motion.p
                     variants={itemVariants}

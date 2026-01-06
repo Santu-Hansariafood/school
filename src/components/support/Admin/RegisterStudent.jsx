@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import { UserPlus, Edit, Trash2 } from 'lucide-react'
 import { useApiClient } from '@/components/providers/ApiClientProvider'
-import { classes as mockClasses } from '@/data/mockData' // Fallback
+import { classes as mockClasses } from '@/data/mockData'
 
 const RegisterStudent = ({ availableClasses }) => {
   const apiClient = useApiClient()
@@ -108,11 +108,20 @@ const RegisterStudent = ({ availableClasses }) => {
     }
   }
 
-  // Combine props, mock classes, and existing students' classes for the dropdown
-  const classOptions = availableClasses || Array.from(new Set([
-    ...mockClasses,
-    ...studentsList.map(s => s.class)
-  ])).sort()
+  const [classOptions, setClassOptions] = useState(availableClasses || mockClasses)
+
+  useEffect(() => {
+    const fetchClasses = async () => {
+      try {
+        const res = await apiClient.get('/api/classes')
+        const names = (res.data || []).map(c => c.name)
+        if (names.length > 0) setClassOptions(names)
+      } catch {
+        setClassOptions(availableClasses || mockClasses)
+      }
+    }
+    fetchClasses()
+  }, [apiClient, availableClasses])
 
   return (
     <div>

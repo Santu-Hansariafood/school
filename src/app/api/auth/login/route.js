@@ -39,6 +39,11 @@ export async function POST(request) {
       return NextResponse.json({ message: "Invalid credentials" }, { status: 401 })
     }
 
+    // Enforce admin login via env-only credentials
+    if (user.role === "admin") {
+      return NextResponse.json({ message: "Admin login via env credentials only" }, { status: 403 })
+    }
+
     if (!["admin", "teacher", "student"].includes(user.role)) {
       return NextResponse.json({ message: "Unauthorized role" }, { status: 403 })
     }

@@ -1,26 +1,37 @@
 "use client"
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Plus, X } from 'lucide-react'
-import { classes as initialClasses } from '@/data/mockData'
 import RegisterStudent from '@/components/support/Admin/RegisterStudent'
+import { useApiClient } from '@/components/providers/ApiClientProvider'
 
 export default function ClassesManager() {
-  const [classes, setClasses] = useState(initialClasses)
+  const apiClient = useApiClient()
+  const [classes, setClasses] = useState([])
   const [newClass, setNewClass] = useState('')
   const [showAddClass, setShowAddClass] = useState(false)
   const [activeTab, setActiveTab] = useState('register') // 'register' or 'classes'
 
   const handleAddClass = (e) => {
     e.preventDefault()
-    if (newClass && !classes.includes(newClass)) {
-      const updatedClasses = [...classes, newClass].sort()
-      setClasses(updatedClasses)
-      // Note: This won't persist to mockData.js permanently, but works for the session/component
-      initialClasses.push(newClass) 
-      setNewClass('')
-      setShowAddClass(false)
-    }
+    if (!newClass) return
+    if (classes.includes(newClass)) return
+    apiClient.post('/api/classes', { name: newClass })
+      .then(res => {
+        setClasses(prev => [...prev, res.data.name].sort())
+        setNewClass('')
+        setShowAddClass(false)
+      })
+      .catch(() => {})
   }
+
+  useEffect(() => {
+    apiClient.get('/api/classes')
+      .then(res => {
+        const names = (res.data || []).map(c => c.name)
+        setClasses(names.sort())
+      })
+      .catch(() => {})
+  }, [apiClient])
 
   return (
     <div className="space-y-6">
