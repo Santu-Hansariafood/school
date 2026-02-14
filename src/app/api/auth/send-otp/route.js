@@ -3,6 +3,7 @@ import { connectDB } from "@/lib/mongodb"
 import AdminOTP from "@/models/AdminOTP"
 import User from "@/models/User"
 import nodemailer from "nodemailer"
+import { otpEmailTemplate } from "@/lib/emailTemplates"
 
 function genOTP() {
   return Math.floor(100000 + Math.random() * 900000).toString()
@@ -59,13 +60,9 @@ export async function POST(request) {
       auth: { user, pass }
     })
 
-    await transporter.sendMail({
-      from: `"School Portal" <${user}>`,
-      to: email,
-      subject: `Your ${role} OTP Code`,
-      text: `Your verification code is ${code}. It expires in 10 minutes.`,
-      html: `<p>Your verification code is <strong style="font-size:18px">${code}</strong>.</p><p>This code expires in 10 minutes.</p>`
-    })
+    const html = otpEmailTemplate({ code, role, appName: "School Portal" })
+    const text = `Your ${role} verification code is ${code}. It expires in 10 minutes.`
+    await transporter.sendMail({ from: `"School Portal" <${user}>`, to: email, subject: `Your ${role} OTP Code`, text, html })
 
     return NextResponse.json({ message: "OTP sent" }, { status: 200 })
   } catch (error) {
