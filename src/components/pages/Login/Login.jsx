@@ -5,9 +5,7 @@ import { createApiClient } from '@/lib/axiosInstance'
 
 const Login = ({ onLogin, apiKey }) => {
   const [role, setRole] = useState('admin')
-  const [adminEmails, setAdminEmails] = useState([])
   const [email, setEmail] = useState('')
-  const [selectedAdminEmail, setSelectedAdminEmail] = useState('')
   const [otpCode, setOtpCode] = useState('')
   const [otpMessage, setOtpMessage] = useState(null)
   const [otpSending, setOtpSending] = useState(false)
@@ -37,18 +35,6 @@ const Login = ({ onLogin, apiKey }) => {
                   setOtpMessage(null)
                   setOtpCode('')
                   setEmail('')
-                  if (r === 'admin') {
-                    try {
-                      const api = createApiClient(apiKey)
-                      const res = await api.get('/api/auth/admin/emails')
-                      const emails = res.data?.emails || []
-                      setAdminEmails(emails)
-                      setSelectedAdminEmail(emails[0] || '')
-                    } catch {
-                      setAdminEmails([])
-                      setSelectedAdminEmail('')
-                    }
-                  }
                 }}
                 className={`py-2 rounded-lg border ${role===r?'bg-blue-600 text-white border-blue-600':'bg-white text-gray-700 border-gray-300'}`}
               >
@@ -58,48 +44,37 @@ const Login = ({ onLogin, apiKey }) => {
           </div>
 
           <div className="space-y-6">
-            {role === 'admin' ? (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Admin Email</label>
-                <select
-                  value={selectedAdminEmail}
-                  onChange={(e) => setSelectedAdminEmail(e.target.value)}
-                  className="w-full pr-4 py-3 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none"
-                >
-                  {adminEmails.map((e) => <option key={e} value={e}>{e}</option>)}
-                </select>
-              </div>
-            ) : (
-              <div className="relative">
-                <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
-                <Mail className="absolute left-3 top-10 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e)=>setEmail(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none"
-                  required
-                />
-              </div>
-            )}
+            <div className="relative">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                {role === 'admin' ? 'Admin Email' : 'Email'}
+              </label>
+              <Mail className="absolute left-3 top-10 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <input
+                type="email"
+                value={email}
+                onChange={(e)=>setEmail(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none"
+                required
+              />
+            </div>
 
             <div className="flex gap-3">
               <button
                 onClick={async () => {
                   setOtpMessage(null)
-                  const chosenEmail = role==='admin' ? selectedAdminEmail : email
-                  if (!chosenEmail) {
+                  if (!email) {
                     setOtpMessage({ type: 'error', message: 'Enter/select an email' })
                     return
                   }
                   setOtpSending(true)
                   try {
                     const api = createApiClient(apiKey)
-                    await api.post('/api/auth/send-otp', { email: chosenEmail, role })
+                    await api.post('/api/auth/send-otp', { email, role })
                     setOtpMessage({ type: 'success', message: 'OTP sent to email' })
                   } catch (e) {
+                    const status = e?.response?.status
                     const msg = e?.response?.data?.message || 'Failed to send OTP'
-                    setOtpMessage({ type: 'error', message: msg })
+                    setOtpMessage({ type: 'error', message: status === 403 ? 'Connect to admin for access' : msg })
                   } finally {
                     setOtpSending(false)
                   }
@@ -120,20 +95,20 @@ const Login = ({ onLogin, apiKey }) => {
               <button
                 onClick={async () => {
                   setOtpMessage(null)
-                  const chosenEmail = role==='admin' ? selectedAdminEmail : email
-                  if (!chosenEmail || otpCode.length!==6) {
+                  if (!email || otpCode.length!==6) {
                     setOtpMessage({ type: 'error', message: 'Enter email and 6-digit OTP' })
                     return
                   }
                   setOtpVerifying(true)
                   try {
                     const api = createApiClient(apiKey)
-                    const res = await api.post('/api/auth/verify-otp', { email: chosenEmail, role, otp: otpCode })
+                    const res = await api.post('/api/auth/verify-otp', { email, role, otp: otpCode })
                     const { user } = res.data
                     onLogin(user)
                   } catch (e) {
+                    const status = e?.response?.status
                     const msg = e?.response?.data?.message || 'Invalid OTP'
-                    setOtpMessage({ type: 'error', message: msg })
+                    setOtpMessage({ type: 'error', message: status === 403 ? 'Connect to admin for access' : msg })
                   } finally {
                     setOtpVerifying(false)
                   }
