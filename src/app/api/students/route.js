@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { connectDB } from "@/lib/mongodb"
 import Student from "@/models/Student"
+import User from "@/models/User"
 
 export async function GET(request) {
   try {
@@ -43,7 +44,25 @@ export async function POST(request) {
 
     await connectDB()
     const body = await request.json()
+
+    const { email, name } = body || {}
+    if (!email || !name) {
+      return NextResponse.json({ message: "Name and email are required" }, { status: 400 })
+    }
+
+    const existingUser = await User.findOne({ email })
+    if (existingUser && existingUser.role !== "student") {
+      return NextResponse.json({ message: "Email already registered with another role" }, { status: 400 })
+    }
+
     const student = await Student.create(body)
+
+    await User.updateOne(
+      { email },
+      { $setOnInsert: { username: email }, $set: { name, role: "student", email } },
+      { upsert: true }
+    )
+
     return NextResponse.json(student, { status: 201 })
   } catch (error) {
     console.error("Error creating student:", error)

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { GraduationCap, Mail, Loader2 } from 'lucide-react'
+import { GraduationCap, Mail, Loader2, Shield, User } from 'lucide-react'
 import { createApiClient } from '@/lib/axiosInstance'
 
 const Login = ({ onLogin, apiKey }) => {
@@ -12,21 +12,28 @@ const Login = ({ onLogin, apiKey }) => {
   const [otpVerifying, setOtpVerifying] = useState(false)
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-white p-4">
+    <div className="relative min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-indigo-50 p-4 overflow-hidden">
+      <div aria-hidden className="pointer-events-none absolute -top-24 -left-24 w-80 h-80 rounded-full bg-blue-200/30 blur-3xl" />
+      <div aria-hidden className="pointer-events-none absolute -bottom-24 -right-24 w-96 h-96 rounded-full bg-indigo-200/30 blur-3xl" />
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-gray-100 p-8"
+        className="w-full max-w-md bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden"
       >
-        <div className="flex items-center justify-center mb-8">
-          <div className="w-12 h-12 rounded-xl bg-blue-600/10 flex items-center justify-center">
-            <GraduationCap className="w-7 h-7 text-blue-600" />
+        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-6">
+          <div className="flex items-center justify-center">
+            <div className="w-12 h-12 rounded-xl bg-white/15 flex items-center justify-center backdrop-blur">
+              <GraduationCap className="w-7 h-7 text-white" />
+            </div>
+            <div className="ml-3">
+              <h1 className="text-2xl font-bold text-white">School Portal</h1>
+              <p className="text-xs text-white/80">Access your dashboard securely</p>
+            </div>
           </div>
-          <h1 className="text-2xl font-bold ml-3 text-gray-900">School Portal</h1>
         </div>
 
-        <div>
-          <div className="mb-6 grid grid-cols-3 gap-2">
+        <div className="p-6">
+          <div className="mb-6 grid grid-cols-1 sm:grid-cols-3 gap-2 bg-gray-50 p-1 rounded-xl">
             {['admin','teacher','student'].map((r) => (
               <button
                 key={r}
@@ -36,9 +43,15 @@ const Login = ({ onLogin, apiKey }) => {
                   setOtpCode('')
                   setEmail('')
                 }}
-                className={`py-2 rounded-lg border ${role===r?'bg-blue-600 text-white border-blue-600':'bg-white text-gray-700 border-gray-300'}`}
+                className={`flex items-center justify-center gap-2 py-2 rounded-lg text-sm sm:text-base transition-all
+                 ${role===r
+                  ? 'bg-white text-blue-700 shadow-sm'
+                  : 'text-gray-700 hover:bg-white/80'}`}
               >
-                {r.charAt(0).toUpperCase()+r.slice(1)}
+                {r === 'admin' && <Shield className="w-4 h-4" />}
+                {r === 'teacher' && <User className="w-4 h-4" />}
+                {r === 'student' && <GraduationCap className="w-4 h-4" />}
+                <span className="font-medium">{r.charAt(0).toUpperCase()+r.slice(1)}</span>
               </button>
             ))}
           </div>
@@ -53,12 +66,12 @@ const Login = ({ onLogin, apiKey }) => {
                 type="email"
                 value={email}
                 onChange={(e)=>setEmail(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none"
+                className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none transition-all"
                 required
               />
             </div>
 
-            <div className="flex gap-3">
+            <div className="flex flex-col sm:flex-row gap-3">
               <button
                 onClick={async () => {
                   setOtpMessage(null)
@@ -80,7 +93,7 @@ const Login = ({ onLogin, apiKey }) => {
                   }
                 }}
                 disabled={otpSending}
-                className="px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg disabled:opacity-70"
+                className="px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow disabled:opacity-70"
               >
                 {otpSending ? <span className="flex items-center"><Loader2 className="w-5 h-5 mr-2 animate-spin" /> Sending...</span> : 'Send OTP'}
               </button>
@@ -90,7 +103,7 @@ const Login = ({ onLogin, apiKey }) => {
                 value={otpCode}
                 onChange={(e)=>setOtpCode(e.target.value.replace(/\\D/g,''))}
                 placeholder="Enter 6-digit OTP"
-                className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none"
+                className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none font-mono tracking-widest text-lg"
               />
               <button
                 onClick={async () => {
@@ -114,15 +127,15 @@ const Login = ({ onLogin, apiKey }) => {
                   }
                 }}
                 disabled={otpVerifying}
-                className="px-4 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg disabled:opacity-70"
+                className="px-4 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow disabled:opacity-70"
               >
                 {otpVerifying ? <span className="flex items-center"><Loader2 className="w-5 h-5 mr-2 animate-spin" /> Verifying...</span> : 'Verify'}
               </button>
             </div>
 
             {otpMessage && (
-              <div className={`rounded-xl p-3 ${otpMessage.type === 'success' ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
-                <p className={`${otpMessage.type === 'success' ? 'text-green-700' : 'text-red-700'} text-sm text-center`}>{otpMessage.message}</p>
+              <div className={`rounded-xl p-3 border ${otpMessage.type === 'success' ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+                <p className={`${otpMessage.type === 'success' ? 'text-green-700' : 'text-red-700'} text-sm text-center font-medium`}>{otpMessage.message}</p>
               </div>
             )}
           </div>

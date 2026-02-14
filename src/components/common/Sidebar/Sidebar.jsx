@@ -14,7 +14,13 @@ const Sidebar = ({ menuItems, user, onLogout, sidebarOpen, setSidebarOpen }) => 
         {sidebarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
       </button>
 
-      <motion.aside initial={{ x: -300 }} animate={{ x: 0 }} className={`fixed left-0 top-0 h-screen bg-white shadow-xl z-40 transition-all duration-300 ${sidebarOpen ? 'w-64' : 'w-20'}`}>
+      <motion.aside
+        initial={{ x: -300 }}
+        animate={{ x: 0 }}
+        className={`fixed left-0 top-0 h-screen bg-white shadow-xl z-40 transition-all duration-300 transform
+        ${sidebarOpen ? 'translate-x-0 w-64' : '-translate-x-full w-64'}
+        lg:translate-x-0 ${sidebarOpen ? 'lg:w-64' : 'lg:w-20'}`}
+      >
         <div className="flex items-center gap-3 p-6 border-b border-gray-200">
           <GraduationCap className="w-8 h-8 text-blue-600 flex-shrink-0" />
           {sidebarOpen && <span className="text-xl font-bold text-gray-800">SMS</span>}
@@ -53,6 +59,7 @@ const Sidebar = ({ menuItems, user, onLogout, sidebarOpen, setSidebarOpen }) => 
           </button>
         </div>
       </motion.aside>
+      {sidebarOpen && <div className="fixed inset-0 bg-black/20 z-30 lg:hidden" onClick={() => setSidebarOpen(false)} />}
     </>
   )
 }
