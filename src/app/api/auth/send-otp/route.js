@@ -48,6 +48,7 @@ export async function POST(request) {
     const code = genOTP()
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000)
     await AdminOTP.create({ email, code, expiresAt })
+    console.log("[OTP]", role, email, code)
 
     const user = process.env.EMAIL_USER
     const pass = process.env.EMAIL_PASS
