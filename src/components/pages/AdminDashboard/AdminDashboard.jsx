@@ -12,39 +12,7 @@ import Fees from '../components/Fees'
 import { students, teachers, assignments, libraryBooks, registeredStudents, registeredTeachers, bookIssuanceRecords } from '../data/mockData'
 
 const AdminDashboard = ({ user, onLogout }) => {
-  const apiClient = useApiClient()
   const [sidebarOpen, setSidebarOpen] = useState(true)
-  const [dashboardStats, setDashboardStats] = useState({
-    studentsCount: 0,
-    teachersCount: 0,
-    assignmentsCount: 0,
-    libraryBooksCount: 0
-  })
-  
-  useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const [studentsRes, teachersRes, assignmentsRes, booksRes] = await Promise.all([
-          apiClient.get('/api/students'),
-          apiClient.get('/api/teachers'),
-          apiClient.get('/api/assignments'),
-          apiClient.get('/api/library/books')
-        ])
-        
-        setDashboardStats({
-          studentsCount: studentsRes.data?.length || 0,
-          teachersCount: teachersRes.data?.length || 0,
-          assignmentsCount: assignmentsRes.data?.length || 0,
-          libraryBooksCount: booksRes.data?.length || 0
-        })
-      } catch (error) {
-        console.error('Error fetching dashboard stats:', error)
-      }
-    }
-    
-    fetchStats()
-  }, [apiClient])
-
   const [selectedClass, setSelectedClass] = useState('all')
   const [studentAssignments, setStudentAssignments] = useState([])
   const classes = ['all', ...new Set(students.map(s => s.class))]

@@ -52,43 +52,8 @@ export async function POST(request) {
       return NextResponse.json({ message: "Invalid API key" }, { status: 401 })
     }
     await connectDB()
-    
-    let data;
-    let fileUrl = '';
-    let filePublicId = '';
-
-    const contentType = request.headers.get("content-type") || "";
-
-    if (contentType.includes("multipart/form-data")) {
-      const formData = await request.formData();
-      data = {
-        title: formData.get("title"),
-        subject: formData.get("subject"),
-        dueDate: formData.get("dueDate"),
-        description: formData.get("description"),
-        class: formData.get("class"),
-        createdBy: formData.get("createdBy"),
-        assignedTo: JSON.parse(formData.get("assignedTo") || "[]"),
-      };
-      
-      const file = formData.get("file");
-      if (file && file instanceof File) {
-        const { uploadToCloudinary } = await import("@/lib/cloudinary");
-        const uploadResult = await uploadToCloudinary(file, "assignments");
-        fileUrl = uploadResult.url;
-        filePublicId = uploadResult.publicId;
-      }
-    } else {
-      data = await request.json();
-    }
-
-    const assignmentData = {
-      ...data,
-      fileUrl,
-      filePublicId
-    };
-
-    const assignment = await Assignment.create(assignmentData)
+    const body = await request.json()
+    const assignment = await Assignment.create(body)
     return NextResponse.json(assignment, { status: 201 })
   } catch (error) {
     console.error("Error creating assignment:", error)

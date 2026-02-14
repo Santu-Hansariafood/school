@@ -17,31 +17,11 @@ export async function POST(request) {
       return NextResponse.json({ message: "Username and password are required" }, { status: 400 })
     }
 
-    // Check for demo admin credentials
-    const demoUsername = process.env.ADMIN_DEMO_USERNAME
-    const demoPassword = process.env.ADMIN_DEMO_PASSWORD
-
-    if (demoUsername && demoPassword && username === demoUsername && password === demoPassword) {
-       const demoUser = {
-        id: "demo-admin-id",
-        username: demoUsername,
-        name: "Demo Admin",
-        role: "admin",
-        email: "admin@school.com"
-      }
-      return NextResponse.json({ user: demoUser }, { status: 200 })
-    }
-
     await connectDB()
 
     const user = await User.findOne({ username }).lean()
     if (!user || user.password !== password) {
       return NextResponse.json({ message: "Invalid credentials" }, { status: 401 })
-    }
-
-    // Enforce admin login via env-only credentials
-    if (user.role === "admin") {
-      return NextResponse.json({ message: "Admin login via env credentials only" }, { status: 403 })
     }
 
     if (!["admin", "teacher", "student"].includes(user.role)) {

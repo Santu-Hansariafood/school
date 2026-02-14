@@ -11,8 +11,13 @@ export async function GET(request) {
       return NextResponse.json({ message: "Invalid API key" }, { status: 401 })
     }
 
+    const { searchParams } = new URL(request.url)
+    const email = searchParams.get("email")
+    const query = {}
+    if (email) query.email = email
+
     await connectDB()
-    const teachers = await Teacher.find({}).sort({ createdAt: -1 })
+    const teachers = await Teacher.find(query).sort({ createdAt: -1 })
     return NextResponse.json(teachers, { status: 200 })
   } catch (error) {
     console.error("Error fetching teachers:", error)

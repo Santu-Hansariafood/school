@@ -22,7 +22,6 @@ const Assignments = ({ role, userId }) => {
   const [studentsList, setStudentsList] = useState([])
   const [status, setStatus] = useState({ type: '', message: '' })
   const [submissionUrl, setSubmissionUrl] = useState('')
-  const [selectedFile, setSelectedFile] = useState(null)
 
   const loadStudents = useCallback(async () => {
     try {
@@ -357,17 +356,6 @@ const Assignments = ({ role, userId }) => {
             <p className="text-xs text-gray-500 mb-3">Due: {assignment.dueDate}</p>
             {assignment.description && (
               <p className="text-sm text-gray-600 mb-4 line-clamp-2">{assignment.description}</p>
-            )}
-            {assignment.fileUrl && (
-              <a 
-                href={assignment.fileUrl} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800 mb-4 hover:underline"
-              >
-                <Upload className="w-4 h-4" />
-                View Attachment
-              </a>
             )}
             {role !== 'student' && (
               <div className="flex items-center gap-2 text-sm text-gray-600 mb-4 pt-3 border-t border-gray-100">

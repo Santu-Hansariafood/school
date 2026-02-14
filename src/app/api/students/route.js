@@ -13,10 +13,14 @@ export async function GET(request) {
 
     const { searchParams } = new URL(request.url)
     const classFilter = searchParams.get("class")
+    const email = searchParams.get("email")
 
     const query = {}
     if (classFilter) {
       query.class = classFilter
+    }
+    if (email) {
+      query.email = email
     }
 
     await connectDB()

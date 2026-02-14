@@ -1,12 +1,29 @@
 "use client"
 import { useAuth } from "@/app/providers/AuthProvider"
-import { teachers } from "@/data/mockData"
+import { useApiClient } from "@/components/providers/ApiClientProvider"
+import { useEffect, useState } from "react"
 import { Mail, Phone, MapPin, GraduationCap } from "lucide-react"
 
 export default function TeacherProfilePage() {
   const { user } = useAuth()
+  const apiClient = useApiClient()
+  const [teacher, setTeacher] = useState(null)
+
+  useEffect(() => {
+    const load = async () => {
+      if (!user?.email) return
+      try {
+        const res = await apiClient.get(`/api/teachers?email=${encodeURIComponent(user.email)}`)
+        const list = Array.isArray(res.data) ? res.data : []
+        setTeacher(list[0] || null)
+      } catch {
+        setTeacher(null)
+      }
+    }
+    load()
+  }, [apiClient, user])
+
   if (!user) return null
-  const teacher = teachers.find(t => t.id === user.id)
   if (!teacher) return null
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 p-6">
@@ -18,7 +35,6 @@ export default function TeacherProfilePage() {
             </div>
             <div>
               <h1 className="text-3xl font-bold mb-2">{teacher.name}</h1>
-              <p className="text-blue-100">Teacher ID: {teacher.id}</p>
               <p className="text-blue-100">Subject: {teacher.subject}</p>
             </div>
           </div>
@@ -47,4 +63,3 @@ export default function TeacherProfilePage() {
     </div>
   )
 }
-

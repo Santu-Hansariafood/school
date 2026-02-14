@@ -3,7 +3,7 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/app/providers/AuthProvider"
 import Sidebar from "@/components/common/Sidebar/Sidebar"
-import { Calendar, FileText, BookOpen, BarChart3 } from "lucide-react"
+import { Calendar, FileText, BookOpen, BarChart3, Users } from "lucide-react"
 
 export default function TeacherLayout({ children }) {
   const { user, logout } = useAuth()
@@ -18,7 +18,8 @@ export default function TeacherLayout({ children }) {
     { icon: BarChart3, label: "Overview", path: "/teacher" },
     { icon: Calendar, label: "Attendance", path: "/teacher/attendance" },
     { icon: FileText, label: "Assignments", path: "/teacher/assignments" },
-    { icon: BookOpen, label: "Results", path: "/teacher/results" }
+    { icon: BookOpen, label: "Results", path: "/teacher/results" },
+    { icon: Users, label: "Register Student", path: "/teacher/register-student" }
   ]
 
   if (!user || user.role !== "teacher") return null
@@ -30,4 +31,3 @@ export default function TeacherLayout({ children }) {
     </div>
   )
 }
-

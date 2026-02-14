@@ -7,8 +7,6 @@ const AssignmentSchema = new mongoose.Schema(
     dueDate: { type: String, required: true },
     description: { type: String },
     class: { type: String },
-    fileUrl: { type: String },
-    filePublicId: { type: String },
     assignedTo: [{ type: mongoose.Schema.Types.ObjectId, ref: "Student" }],
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "Teacher" },
   },

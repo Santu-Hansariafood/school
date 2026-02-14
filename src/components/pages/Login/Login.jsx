@@ -7,11 +7,18 @@ const Login = ({ onLogin, apiKey }) => {
   const [credentials, setCredentials] = useState({ username: '', password: '' })
   const [error, setError] = useState('')
   const [showReset, setShowReset] = useState(false)
+  const [showAdminOTP, setShowAdminOTP] = useState(false)
   const [resetEmail, setResetEmail] = useState('')
   const [resetStatus, setResetStatus] = useState(null)
   const [tempPassword, setTempPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [focusedField, setFocusedField] = useState(null)
+  const [adminEmails, setAdminEmails] = useState([])
+  const [selectedAdminEmail, setSelectedAdminEmail] = useState('')
+  const [otpSending, setOtpSending] = useState(false)
+  const [otpVerifying, setOtpVerifying] = useState(false)
+  const [otpCode, setOtpCode] = useState('')
+  const [otpMessage, setOtpMessage] = useState(null)
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -61,10 +68,15 @@ const Login = ({ onLogin, apiKey }) => {
 
   const handleBackToLogin = () => {
     setShowReset(false)
+    setShowAdminOTP(false)
     setResetEmail('')
     setResetStatus(null)
     setTempPassword('')
     setError('')
+    setAdminEmails([])
+    setSelectedAdminEmail('')
+    setOtpCode('')
+    setOtpMessage(null)
   }
 
   const containerVariants = {
@@ -113,7 +125,7 @@ const Login = ({ onLogin, apiKey }) => {
         </div>
 
         <AnimatePresence mode="wait">
-          {!showReset ? (
+          {!showReset && !showAdminOTP ? (
             <motion.div
               key="login"
               initial={{ opacity: 0, x: -30 }}
@@ -177,6 +189,26 @@ const Login = ({ onLogin, apiKey }) => {
               <motion.div variants={itemVariants} className="mt-6 text-center">
                 <motion.button onClick={() => setShowReset(true)} className="text-sm text-blue-600 hover:text-blue-700 font-medium">Forgot password?</motion.button>
               </motion.div>
+              <motion.div variants={itemVariants} className="mt-2 text-center">
+                <motion.button
+                  onClick={async () => {
+                    setShowAdminOTP(true)
+                    setOtpMessage(null)
+                    try {
+                      const api = createApiClient(apiKey)
+                      const res = await api.get('/api/auth/admin/emails')
+                      const emails = res.data?.emails || []
+                      setAdminEmails(emails)
+                      setSelectedAdminEmail(emails[0] || '')
+                    } catch (e) {
+                      setOtpMessage({ type: 'error', message: 'Failed to load admin emails' })
+                    }
+                  }}
+                  className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                >
+                  Sign in as Admin with OTP
+                </motion.button>
+              </motion.div>
 
               {/* Demo credentials */}
               <motion.div
@@ -217,7 +249,7 @@ const Login = ({ onLogin, apiKey }) => {
                 </motion.div>
               </motion.div>
             </motion.div>
-          ) : (
+          ) : showReset ? (
             <motion.div
               key="reset"
               initial={{ opacity: 0, x: 30 }}
@@ -395,6 +427,119 @@ const Login = ({ onLogin, apiKey }) => {
                   </motion.p>
                 </motion.div>
               </motion.div>
+            </motion.div>
+          ) : (
+            <motion.div
+              key="admin-otp"
+              initial={{ opacity: 0, x: 30 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -30 }}
+              transition={{ duration: 0.4, type: 'spring', stiffness: 100 }}
+              variants={containerVariants}
+            >
+              <motion.button
+                variants={itemVariants}
+                onClick={handleBackToLogin}
+                className="flex items-center text-blue-600 hover:text-blue-700 mb-6 transition-colors duration-300 group"
+                whileHover={{ x: -5 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <ArrowLeft className="w-4 h-4 mr-2 transition-transform group-hover:-translate-x-1" />
+                <span className="text-sm font-medium">Back to Login</span>
+              </motion.button>
+
+              <motion.h2 variants={itemVariants} className="text-xl font-semibold text-center mb-2 text-gray-900">Admin OTP Sign in</motion.h2>
+              <motion.p variants={itemVariants} className="text-sm text-gray-600 text-center mb-8">Choose admin email and verify with a 6-digit code</motion.p>
+
+              <div className="space-y-6">
+                <motion.div variants={itemVariants}>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Admin Email</label>
+                  <select
+                    value={selectedAdminEmail}
+                    onChange={(e) => setSelectedAdminEmail(e.target.value)}
+                    className="w-full pr-4 py-3 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none"
+                  >
+                    {adminEmails.map((e) => (
+                      <option key={e} value={e}>{e}</option>
+                    ))}
+                  </select>
+                </motion.div>
+
+                <motion.div variants={itemVariants} className="flex gap-3">
+                  <motion.button
+                    onClick={async () => {
+                      setOtpMessage(null)
+                      if (!selectedAdminEmail) {
+                        setOtpMessage({ type: 'error', message: 'Select an admin email' })
+                        return
+                      }
+                      setOtpSending(true)
+                      try {
+                        const api = createApiClient(apiKey)
+                        await api.post('/api/auth/admin/send-otp', { email: selectedAdminEmail })
+                        setOtpMessage({ type: 'success', message: 'OTP sent to selected email' })
+                      } catch (e) {
+                        const msg = e?.response?.data?.message || 'Failed to send OTP'
+                        setOtpMessage({ type: 'error', message: msg })
+                      } finally {
+                        setOtpSending(false)
+                      }
+                    }}
+                    disabled={otpSending}
+                    className="px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg disabled:opacity-70"
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    {otpSending ? 'Sending...' : 'Send OTP'}
+                  </motion.button>
+                  <input
+                    type="text"
+                    maxLength={6}
+                    value={otpCode}
+                    onChange={(e) => setOtpCode(e.target.value.replace(/\\D/g, ''))}
+                    placeholder="Enter 6-digit OTP"
+                    className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none"
+                  />
+                  <motion.button
+                    onClick={async () => {
+                      setOtpMessage(null)
+                      if (!selectedAdminEmail || otpCode.length !== 6) {
+                        setOtpMessage({ type: 'error', message: 'Enter email and 6-digit OTP' })
+                        return
+                      }
+                      setOtpVerifying(true)
+                      try {
+                        const api = createApiClient(apiKey)
+                        const res = await api.post('/api/auth/admin/verify-otp', { email: selectedAdminEmail, otp: otpCode })
+                        const { user } = res.data
+                        onLogin(user)
+                      } catch (e) {
+                        const msg = e?.response?.data?.message || 'Invalid OTP'
+                        setOtpMessage({ type: 'error', message: msg })
+                      } finally {
+                        setOtpVerifying(false)
+                      }
+                    }}
+                    disabled={otpVerifying}
+                    className="px-4 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg disabled:opacity-70"
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    {otpVerifying ? 'Verifying...' : 'Verify'}
+                  </motion.button>
+                </motion.div>
+
+                <AnimatePresence>
+                  {otpMessage && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className={`rounded-xl p-3 ${otpMessage.type === 'success' ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}
+                    >
+                      <p className={`${otpMessage.type === 'success' ? 'text-green-700' : 'text-red-700'} text-sm text-center`}>{otpMessage.message}</p>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
