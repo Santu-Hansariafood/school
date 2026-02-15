@@ -3,9 +3,11 @@ import { motion } from 'framer-motion'
 import { UserPlus, Edit, Trash2 } from 'lucide-react'
 import { useApiClient } from '@/components/providers/ApiClientProvider'
 import { classes as mockClasses } from '@/data/mockData'
+import { useToast } from '@/components/common/Toast/ToastProvider'
 
 const RegisterStudent = ({ availableClasses }) => {
   const apiClient = useApiClient()
+  const { showToast } = useToast()
   const [studentsList, setStudentsList] = useState([])
   const [isLoading, setIsLoading] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
@@ -55,9 +57,11 @@ const RegisterStudent = ({ availableClasses }) => {
       if (isEditing) {
         await apiClient.put(`/api/students/${editId}`, formData)
         setStatus({ type: 'success', message: 'Student updated successfully!' })
+        showToast({ type: 'success', message: 'Student updated successfully' })
       } else {
         await apiClient.post('/api/students', formData)
         setStatus({ type: 'success', message: 'Student registered successfully!' })
+        showToast({ type: 'success', message: 'Student registered successfully' })
       }
       
       setFormData(initialFormState)
@@ -66,7 +70,9 @@ const RegisterStudent = ({ availableClasses }) => {
       fetchStudents()
     } catch (error) {
       console.error('Error saving student:', error)
-      setStatus({ type: 'error', message: error.response?.data?.message || 'Something went wrong' })
+      const message = error.response?.data?.message || 'Something went wrong'
+      setStatus({ type: 'error', message })
+      showToast({ type: 'error', message })
     } finally {
       setIsLoading(false)
       setTimeout(() => setStatus({ type: '', message: '' }), 3000)
@@ -100,9 +106,11 @@ const RegisterStudent = ({ availableClasses }) => {
       await apiClient.delete(`/api/students/${id}`)
       fetchStudents()
       setStatus({ type: 'success', message: 'Student deleted successfully!' })
+      showToast({ type: 'success', message: 'Student deleted successfully' })
     } catch (error) {
       console.error('Error deleting student:', error)
       setStatus({ type: 'error', message: 'Failed to delete student' })
+      showToast({ type: 'error', message: 'Failed to delete student' })
     } finally {
       setTimeout(() => setStatus({ type: '', message: '' }), 3000)
     }

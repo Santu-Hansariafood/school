@@ -3,9 +3,11 @@ import { useState, useEffect } from 'react'
 import { Plus, X } from 'lucide-react'
 import RegisterStudent from '@/components/support/Admin/RegisterStudent'
 import { useApiClient } from '@/components/providers/ApiClientProvider'
+import { useToast } from '@/components/common/Toast/ToastProvider'
 
 export default function ClassesManager() {
   const apiClient = useApiClient()
+  const { showToast } = useToast()
   const [classes, setClasses] = useState([])
   const [newClass, setNewClass] = useState('')
   const [showAddClass, setShowAddClass] = useState(false)
@@ -14,14 +16,20 @@ export default function ClassesManager() {
   const handleAddClass = (e) => {
     e.preventDefault()
     if (!newClass) return
-    if (classes.includes(newClass)) return
+    if (classes.includes(newClass)) {
+      showToast({ type: 'warning', message: 'Class already exists' })
+      return
+    }
     apiClient.post('/api/classes', { name: newClass })
       .then(res => {
         setClasses(prev => [...prev, res.data.name].sort())
         setNewClass('')
         setShowAddClass(false)
+        showToast({ type: 'success', message: 'Class added successfully' })
       })
-      .catch(() => {})
+      .catch(() => {
+        showToast({ type: 'error', message: 'Failed to add class' })
+      })
   }
 
   useEffect(() => {
@@ -30,7 +38,9 @@ export default function ClassesManager() {
         const names = (res.data || []).map(c => c.name)
         setClasses(names.sort())
       })
-      .catch(() => {})
+      .catch(() => {
+        showToast({ type: 'error', message: 'Failed to load classes' })
+      })
   }, [apiClient])
 
   return (

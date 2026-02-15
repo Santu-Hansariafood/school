@@ -2,9 +2,11 @@ import { useState, useEffect, useCallback, startTransition } from 'react'
 import { motion } from 'framer-motion'
 import { BookPlus } from 'lucide-react'
 import { useApiClient } from '@/components/providers/ApiClientProvider'
+import { useToast } from '@/components/common/Toast/ToastProvider'
 
 const IssueBooks = () => {
   const apiClient = useApiClient()
+  const { showToast } = useToast()
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedStudent, setSelectedStudent] = useState(null)
   const [selectedBook, setSelectedBook] = useState(null)
@@ -55,6 +57,7 @@ const IssueBooks = () => {
           dueDate
         })
         setIssued(true)
+        showToast({ type: 'success', message: 'Book issued successfully' })
         await loadAvailableBooks()
         setTimeout(() => {
           setIssued(false)
@@ -65,6 +68,7 @@ const IssueBooks = () => {
         }, 3000)
       } catch (error) {
         console.error('Error issuing book:', error)
+        showToast({ type: 'error', message: 'Failed to issue book' })
       }
     }
   }

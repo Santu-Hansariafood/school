@@ -1,7 +1,7 @@
 "use client"
 import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { FileText, Plus, Upload, CheckCircle, Clock, Users, X, Check } from 'lucide-react'
+import { FileText, Plus, Upload, CheckCircle, Clock, Users, X, Check, Printer, Edit3 } from 'lucide-react'
 import { useApiClient } from '@/components/providers/ApiClientProvider'
 
 const Assignments = ({ role, userId }) => {
@@ -21,7 +21,7 @@ const Assignments = ({ role, userId }) => {
   const [selectedStudents, setSelectedStudents] = useState([])
   const [studentsList, setStudentsList] = useState([])
   const [status, setStatus] = useState({ type: '', message: '' })
-  const [submissionUrl, setSubmissionUrl] = useState('')
+  const [answers, setAnswers] = useState({})
 
   const loadStudents = useCallback(async () => {
     try {
@@ -119,10 +119,10 @@ const Assignments = ({ role, userId }) => {
     try {
       await apiClient.post(`/api/assignments/${assignment._id}/submissions`, {
         studentId: userId,
-        fileUrl: submissionUrl || '',
+        notes: answers[assignment._id] || '',
       })
-      setStatus({ type: 'success', message: 'Assignment submitted' })
-      setSubmissionUrl('')
+      setStatus({ type: 'success', message: 'Answer submitted' })
+      setAnswers(prev => ({ ...prev, [assignment._id]: '' }))
       setAssignmentList(prev => prev.map(a => a._id === assignment._id ? { ...a, submittedCount: (a.submittedCount || 0) + 1 } : a))
     } catch (error) {
       console.error('Error submitting assignment:', error)
@@ -136,11 +136,43 @@ const Assignments = ({ role, userId }) => {
     return assignment.assignedTo?.length || 0
   }
 
+  const handlePrint = (assignment) => {
+    const w = window.open('', '_blank', 'width=800,height=600')
+    if (!w) return
+    const title = assignment.title || 'Assignment'
+    const subject = assignment.subject || ''
+    const due = assignment.dueDate || ''
+    const desc = assignment.description || ''
+    w.document.write(`<html><head><title>${title}</title><style>
+      body{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;padding:24px;color:#111827}
+      h1{font-size:24px;margin-bottom:4px}
+      h2{font-size:16px;margin:0 0 12px 0;color:#4b5563}
+      .meta{font-size:13px;margin-bottom:16px;color:#6b7280}
+      .box{border:1px solid #e5e7eb;border-radius:12px;padding:16px;margin-top:16px;min-height:160px}
+      .label{font-size:13px;color:#6b7280;margin-bottom:4px}
+      pre{white-space:pre-wrap;font-family:inherit;font-size:14px;margin:0}
+    </style></head><body>
+      <h1>${title}</h1>
+      <h2>${subject}</h2>
+      <div class="meta">Due: ${due}</div>
+      <div>
+        <div class="label">Questions / Instructions</div>
+        <pre>${desc}</pre>
+      </div>
+      <div class="box">
+        <div class="label">Student Answer</div>
+      </div>
+    </body></html>`)
+    w.document.close()
+    w.focus()
+    w.print()
+  }
+
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="max-w-7xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-3xl font-bold text-gray-800">Assignments</h1>
-        {role === 'teacher' && (
+        {(role === 'teacher' || role === 'admin') && (
           <button 
             onClick={() => setShowForm(!showForm)} 
             className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors shadow-md hover:shadow-lg"
@@ -157,7 +189,7 @@ const Assignments = ({ role, userId }) => {
       )}
 
       <AnimatePresence>
-        {showForm && role === 'teacher' && (
+        {showForm && (role === 'teacher' || role === 'admin') && (
           <motion.div 
             initial={{ opacity: 0, y: -20 }} 
             animate={{ opacity: 1, y: 0 }}
@@ -227,9 +259,9 @@ const Assignments = ({ role, userId }) => {
                   </div>
                 </div>
                 <div className="mb-6">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Questions / Instructions</label>
                   <textarea 
-                    placeholder="Provide detailed instructions for the assignment..." 
+                    placeholder="Write questions and detailed instructions for the assignment..." 
                     value={newAssignment.description} 
                     onChange={(e) => setNewAssignment({ ...newAssignment, description: e.target.value })} 
                     className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition resize-none" 
@@ -350,12 +382,20 @@ const Assignments = ({ role, userId }) => {
               <div className="p-3 bg-blue-100 rounded-lg">
                 <FileText className="w-6 h-6 text-blue-600" />
               </div>
+              <button
+                type="button"
+                onClick={() => handlePrint(assignment)}
+                className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700"
+              >
+                <Printer className="w-4 h-4" />
+                Print
+              </button>
             </div>
             <h3 className="text-lg font-semibold text-gray-800 mb-2">{assignment.title}</h3>
             <p className="text-sm text-gray-600 mb-1">{assignment.subject}</p>
             <p className="text-xs text-gray-500 mb-3">Due: {assignment.dueDate}</p>
             {assignment.description && (
-              <p className="text-sm text-gray-600 mb-4 line-clamp-2">{assignment.description}</p>
+              <p className="text-sm text-gray-600 mb-4 whitespace-pre-wrap">{assignment.description}</p>
             )}
             {role !== 'student' && (
               <div className="flex items-center gap-2 text-sm text-gray-600 mb-4 pt-3 border-t border-gray-100">
@@ -365,19 +405,22 @@ const Assignments = ({ role, userId }) => {
             )}
             {role === 'student' && (
               <div className="space-y-3">
-                <input 
-                  type="url"
-                  value={submissionUrl}
-                  onChange={(e) => setSubmissionUrl(e.target.value)}
-                  placeholder="Submission URL (optional)"
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
-                />
+                <div>
+                  <p className="text-xs font-medium text-gray-600 mb-1">Write your answer below</p>
+                  <textarea
+                    value={answers[assignment._id] || ''}
+                    onChange={(e) => setAnswers(prev => ({ ...prev, [assignment._id]: e.target.value }))}
+                    rows="4"
+                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition resize-none text-sm"
+                    placeholder="Type your answer here..."
+                  />
+                </div>
                 <button 
                   onClick={() => handleSubmit(assignment)} 
                   className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium"
                 >
-                  <Upload className="w-4 h-4" />
-                  Submit Assignment
+                  <Edit3 className="w-4 h-4" />
+                  Submit Answer
                 </button>
               </div>
             )}

@@ -3,9 +3,11 @@ import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { UserPlus, Edit, Trash2 } from 'lucide-react'
 import { useApiClient } from '@/components/providers/ApiClientProvider'
+import { useToast } from '@/components/common/Toast/ToastProvider'
 
 const RegisterAdmin = () => {
   const apiClient = useApiClient()
+  const { showToast } = useToast()
   const [adminsList, setAdminsList] = useState([])
   const [isLoading, setIsLoading] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
@@ -49,9 +51,11 @@ const RegisterAdmin = () => {
       if (isEditing) {
         await apiClient.put(`/api/admins/${editId}`, formData)
         setStatus({ type: 'success', message: 'Admin updated successfully!' })
+        showToast({ type: 'success', message: 'Admin updated successfully' })
       } else {
         await apiClient.post('/api/admins', formData)
         setStatus({ type: 'success', message: 'Admin registered successfully!' })
+        showToast({ type: 'success', message: 'Admin registered successfully' })
       }
       setFormData(initialFormState)
       setIsEditing(false)
@@ -59,7 +63,9 @@ const RegisterAdmin = () => {
       fetchAdmins()
     } catch (error) {
       console.error('Error saving admin:', error)
-      setStatus({ type: 'error', message: error.response?.data?.message || 'Something went wrong' })
+      const message = error.response?.data?.message || 'Something went wrong'
+      setStatus({ type: 'error', message })
+      showToast({ type: 'error', message })
     } finally {
       setIsLoading(false)
       setTimeout(() => setStatus({ type: '', message: '' }), 3000)
@@ -86,9 +92,11 @@ const RegisterAdmin = () => {
       await apiClient.delete(`/api/admins/${id}`)
       fetchAdmins()
       setStatus({ type: 'success', message: 'Admin deleted successfully!' })
+      showToast({ type: 'success', message: 'Admin deleted successfully' })
     } catch (error) {
       console.error('Error deleting admin:', error)
       setStatus({ type: 'error', message: 'Failed to delete admin' })
+      showToast({ type: 'error', message: 'Failed to delete admin' })
     } finally {
       setTimeout(() => setStatus({ type: '', message: '' }), 3000)
     }

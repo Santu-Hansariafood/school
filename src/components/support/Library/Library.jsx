@@ -3,10 +3,12 @@ import { motion } from 'framer-motion'
 import { BookOpen, Search, Calendar, User } from 'lucide-react'
 import { useApiClient } from '@/components/providers/ApiClientProvider'
 import { useAuth } from '@/app/providers/AuthProvider'
+import { useToast } from '@/components/common/Toast/ToastProvider'
 
 const Library = ({ role }) => {
   const apiClient = useApiClient()
   const { user } = useAuth()
+  const { showToast } = useToast()
   const [books, setBooks] = useState([])
   const [searchTerm, setSearchTerm] = useState('')
   const [studentsList, setStudentsList] = useState([])
@@ -20,8 +22,9 @@ const Library = ({ role }) => {
       })
     } catch (error) {
       console.error('Error loading books:', error)
+      showToast({ type: 'error', message: 'Failed to load books' })
     }
-  }, [apiClient])
+  }, [apiClient, showToast])
 
   const loadStudents = useCallback(async () => {
     if (role !== 'student') return
@@ -72,8 +75,10 @@ const Library = ({ role }) => {
         }
       }
       await loadBooks()
+      showToast({ type: 'success', message: 'Book returned successfully' })
     } catch (error) {
       console.error('Error returning book:', error)
+      showToast({ type: 'error', message: 'Failed to return book' })
     }
   }
 

@@ -14,9 +14,11 @@ import {
 import { feeRecords, students } from "@/data/mockData";
 import jsPDF from "jspdf";
 import { useAuth } from "@/app/providers/AuthProvider";
+import { useToast } from "@/components/common/Toast/ToastProvider";
 
 const Fees = ({ role }) => {
   const { user } = useAuth();
+  const { showToast } = useToast();
 
   const [selectedStudent, setSelectedStudent] = useState(
     role === "student" ? user?.id || "S001" : students[0]?.id
@@ -66,7 +68,7 @@ const Fees = ({ role }) => {
   // --- PROCESS PAYMENT ---
   const processPayment = async () => {
     if (!selectedFee) {
-      alert("Please select a fee to pay");
+      showToast({ type: "warning", message: "Please select a fee to pay" });
       return;
     }
 
@@ -77,12 +79,12 @@ const Fees = ({ role }) => {
         !cardDetails.expiry ||
         !cardDetails.cvv
       ) {
-        alert("Please fill all card details");
+        showToast({ type: "warning", message: "Please fill all card details" });
         return;
       }
     } else if (paymentMethod === "upi") {
       if (!upiId) {
-        alert("Please enter UPI ID");
+        showToast({ type: "warning", message: "Please enter UPI ID" });
         return;
       }
     }
@@ -113,12 +115,13 @@ const Fees = ({ role }) => {
 
     setTransactionDetails(transaction);
     setPaymentSuccess(true);
+    showToast({ type: "success", message: "Payment successful" });
     setProcessing(false);
   };
 
   const downloadReceipt = () => {
     if (!transactionDetails) {
-      alert("No transaction available");
+      showToast({ type: "warning", message: "No transaction available" });
       return;
     }
     const doc = new jsPDF();

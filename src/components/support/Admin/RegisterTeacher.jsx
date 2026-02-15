@@ -3,9 +3,11 @@ import { motion } from 'framer-motion'
 import { UserPlus, Edit, Trash2 } from 'lucide-react'
 import { useApiClient } from '@/components/providers/ApiClientProvider'
 import { students as mockStudents, teachers as mockTeachers } from '@/data/mockData'
+import { useToast } from '@/components/common/Toast/ToastProvider'
 
 const RegisterTeacher = () => {
   const apiClient = useApiClient()
+  const { showToast } = useToast()
   const [teachersList, setTeachersList] = useState([])
   const [isLoading, setIsLoading] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
@@ -90,9 +92,11 @@ const RegisterTeacher = () => {
       if (isEditing) {
         await apiClient.put(`/api/teachers/${editId}`, formData)
         setStatus({ type: 'success', message: 'Teacher updated successfully!' })
+        showToast({ type: 'success', message: 'Teacher updated successfully' })
       } else {
         await apiClient.post('/api/teachers', formData)
         setStatus({ type: 'success', message: 'Teacher registered successfully!' })
+        showToast({ type: 'success', message: 'Teacher registered successfully' })
       }
       
       setFormData(initialFormState)
@@ -101,7 +105,9 @@ const RegisterTeacher = () => {
       fetchTeachers()
     } catch (error) {
       console.error('Error saving teacher:', error)
-      setStatus({ type: 'error', message: error.response?.data?.message || 'Something went wrong' })
+      const message = error.response?.data?.message || 'Something went wrong'
+      setStatus({ type: 'error', message })
+      showToast({ type: 'error', message })
     } finally {
       setIsLoading(false)
       setTimeout(() => setStatus({ type: '', message: '' }), 3000)
@@ -135,9 +141,11 @@ const RegisterTeacher = () => {
       await apiClient.delete(`/api/teachers/${id}`)
       fetchTeachers()
       setStatus({ type: 'success', message: 'Teacher deleted successfully!' })
+      showToast({ type: 'success', message: 'Teacher deleted successfully' })
     } catch (error) {
       console.error('Error deleting teacher:', error)
       setStatus({ type: 'error', message: 'Failed to delete teacher' })
+      showToast({ type: 'error', message: 'Failed to delete teacher' })
     } finally {
       setTimeout(() => setStatus({ type: '', message: '' }), 3000)
     }

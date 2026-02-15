@@ -31,9 +31,11 @@ export async function POST(request, { params }) {
     }
     await connectDB()
     const body = await request.json()
+    const notes = body.notes || body.answerText || ""
+    const fileUrl = body.fileUrl || ""
     const saved = await AssignmentSubmission.findOneAndUpdate(
       { assignmentId: params.id, studentId: body.studentId },
-      { $set: { status: "submitted", fileUrl: body.fileUrl || "", notes: body.notes || "" } },
+      { $set: { status: "submitted", fileUrl, notes } },
       { upsert: true, new: true, runValidators: true }
     )
     return NextResponse.json(saved, { status: 200 })
@@ -42,4 +44,3 @@ export async function POST(request, { params }) {
     return NextResponse.json({ message: "Internal server error" }, { status: 500 })
   }
 }
-

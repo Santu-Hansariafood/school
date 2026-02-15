@@ -6,6 +6,8 @@ if (!uri) {
   throw new Error("MONGODB_URI is missing from environment variables");
 }
 
+const maxPoolSize = Number(process.env.MONGODB_MAX_POOL_SIZE || "500") || 500;
+
 let cached = global._mongoose;
 
 if (!cached) {
@@ -18,7 +20,7 @@ export async function connectDB() {
   if (!cached.promise) {
     cached.promise = mongoose
       .connect(uri, {
-        maxPoolSize: 50,
+        maxPoolSize,
         serverSelectionTimeoutMS: 5000,
         socketTimeoutMS: 45000,
       })

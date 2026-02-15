@@ -3,8 +3,10 @@ import { useState, useMemo, useEffect, useCallback } from 'react'
 import { useApiClient } from '@/components/providers/ApiClientProvider'
 import { motion } from 'framer-motion'
 import { Calendar, CheckCircle, XCircle, Clock, ChevronDown, TrendingUp } from 'lucide-react'
+import { useToast } from '@/components/common/Toast/ToastProvider'
 const Attendance = ({ role }) => {
   const apiClient = useApiClient()
+  const { showToast } = useToast()
   const currentDate = new Date()
   const [selectedMonth, setSelectedMonth] = useState(`${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`)
   const [attendanceData, setAttendanceData] = useState([])
@@ -18,8 +20,9 @@ const Attendance = ({ role }) => {
       setStudentsList(res.data || [])
     } catch (error) {
       console.error('Error loading students for attendance:', error)
+      showToast({ type: 'error', message: 'Failed to load students for attendance' })
     }
-  }, [apiClient])
+  }, [apiClient, showToast])
 
   const loadAttendanceForMonth = useCallback(async (monthKey) => {
     try {
@@ -27,8 +30,9 @@ const Attendance = ({ role }) => {
       setAttendanceData(res.data || [])
     } catch (error) {
       console.error('Error loading attendance records:', error)
+      showToast({ type: 'error', message: 'Failed to load attendance records' })
     }
-  }, [apiClient])
+  }, [apiClient, showToast])
 
   useEffect(() => {
     loadStudents()
@@ -98,6 +102,7 @@ const Attendance = ({ role }) => {
     } catch (error) {
       console.error('Error updating attendance:', error)
       setStatus({ type: 'error', message: 'Failed to update attendance' })
+      showToast({ type: 'error', message: 'Failed to update attendance' })
     } finally {
       setTimeout(() => setStatus({ type: '', message: '' }), 2500)
     }

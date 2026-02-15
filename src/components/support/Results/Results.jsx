@@ -1,12 +1,14 @@
 import { useState, useEffect, useCallback, startTransition } from 'react'
 import { motion } from 'framer-motion'
-import { BookOpen, TrendingUp, Award, X } from 'lucide-react'
+import { BookOpen, TrendingUp, Award, X, Printer, Mail } from 'lucide-react'
 import { useApiClient } from '@/components/providers/ApiClientProvider'
 import { useAuth } from '@/app/providers/AuthProvider'
+import { useToast } from '@/components/common/Toast/ToastProvider'
 
 const Results = ({ role }) => {
   const apiClient = useApiClient()
   const { user } = useAuth()
+  const { showToast } = useToast()
   const [studentsList, setStudentsList] = useState([])
   const [selectedStudent, setSelectedStudent] = useState('')
   const [resultsList, setResultsList] = useState([])
@@ -14,6 +16,7 @@ const Results = ({ role }) => {
   const [editingMarks, setEditingMarks] = useState({})
   const [saveSuccess, setSaveSuccess] = useState(false)
   const [saveError, setSaveError] = useState('')
+  const [marksheetStatus, setMarksheetStatus] = useState('')
 
   const fetchStudents = useCallback(async () => {
     try {
@@ -34,8 +37,9 @@ const Results = ({ role }) => {
       }
     } catch (error) {
       console.error('Error loading students for results:', error)
+      showToast({ type: 'error', message: 'Failed to load students for results' })
     }
-  }, [apiClient, role, user])
+  }, [apiClient, role, user, showToast])
 
   const fetchResults = useCallback(async (studentId) => {
     if (!studentId) return
@@ -46,8 +50,9 @@ const Results = ({ role }) => {
       })
     } catch (error) {
       console.error('Error loading results:', error)
+      showToast({ type: 'error', message: 'Failed to load results' })
     }
-  }, [apiClient])
+  }, [apiClient, showToast])
 
   useEffect(() => {
     fetchStudents()
@@ -61,6 +66,114 @@ const Results = ({ role }) => {
     if (resultsList.length === 0) return 0
     const total = resultsList.reduce((sum, r) => sum + (r.marks || 0), 0)
     return (total / resultsList.length).toFixed(1)
+  }
+
+  const handlePrintMarksheet = () => {
+    if (!resultsList.length) return
+    const student = studentsList.find(s => s._id === selectedStudent)
+    const w = window.open('', '_blank', 'width=900,height=700')
+    if (!w) return
+    const name = student?.name || 'Student'
+    const cls = student?.class || ''
+    const avg = calculateAverage()
+    const grade = getGrade(Number(avg))
+    const rows = resultsList.map((r, idx) => {
+      const marks = r.marks || 0
+      return `<tr>
+        <td>${idx + 1}</td>
+        <td>${r.subject}</td>
+        <td>100</td>
+        <td>${marks}</td>
+        <td>${marks}%</td>
+        <td>${getGrade(marks)}</td>
+      </tr>`
+    }).join("")
+    w.document.write(`<html><head><title>Marksheet - ${name}</title><style>
+      body{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;padding:32px;background:#f3f4f6;color:#111827}
+      .card{max-width:900px;margin:0 auto;background:white;border-radius:16px;border:1px solid #e5e7eb;box-shadow:0 10px 30px rgba(15,23,42,0.08);padding:28px 32px;}
+      .header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;}
+      .logo{display:flex;align-items:center;gap:12px;}
+      .logo-circle{width:44px;height:44px;border-radius:14px;background:#2563eb1a;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:22px;color:#1d4ed8;}
+      h1{margin:0;font-size:22px;}
+      h2{margin:0;font-size:14px;color:#6b7280;}
+      .meta{display:flex;flex-wrap:wrap;gap:16px;margin:16px 0 24px 0;font-size:13px;color:#374151;}
+      .meta-item span{display:block;}
+      .meta-label{font-size:12px;color:#6b7280;}
+      table{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px;}
+      th,td{padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:center;}
+      th{text-align:center;background:#f9fafb;font-weight:600;color:#4b5563;}
+      td:first-child,th:first-child{text-align:left;}
+      .summary{margin-top:16px;font-size:13px;color:#4b5563;}
+      .summary strong{font-weight:600;}
+    </style></head><body onload="window.print()">
+      <div class="card">
+        <div class="header">
+          <div class="logo">
+            <div class="logo-circle">S</div>
+            <div>
+              <h1>School Portal</h1>
+              <h2>Official Academic Marksheet</h2>
+            </div>
+          </div>
+          <div style="text-align:right;font-size:12px;color:#6b7280;">
+            <div>Generated: ${new Date().toLocaleDateString()}</div>
+          </div>
+        </div>
+        <div class="meta">
+          <div class="meta-item">
+            <span class="meta-label">Student Name</span>
+            <span>${name}</span>
+          </div>
+          ${cls ? `<div class="meta-item">
+            <span class="meta-label">Class</span>
+            <span>${cls}</span>
+          </div>` : ""}
+          <div class="meta-item">
+            <span class="meta-label">Average</span>
+            <span>${avg}%</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Overall Grade</span>
+            <span>${grade}</span>
+          </div>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Subject</th>
+              <th>Total</th>
+              <th>Marks</th>
+              <th>%</th>
+              <th>Grade</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows}
+          </tbody>
+        </table>
+        <div class="summary">
+          <p><strong>Note:</strong> This marksheet is system generated and does not require a physical signature.</p>
+        </div>
+      </div>
+    </body></html>`)
+    w.document.close()
+  }
+
+  const handleEmailMarksheet = async () => {
+    if (!selectedStudent) return
+    try {
+      setMarksheetStatus('Sending marksheet to your email...')
+      await apiClient.post('/api/results/marksheet-email', { studentId: selectedStudent })
+      setMarksheetStatus('Marksheet sent to your registered email')
+      showToast({ type: 'success', message: 'Marksheet email sent' })
+      setTimeout(() => setMarksheetStatus(''), 3000)
+    } catch (error) {
+      console.error('Error emailing marksheet:', error)
+      setMarksheetStatus('Failed to send marksheet email')
+      showToast({ type: 'error', message: 'Failed to send marksheet email' })
+      setTimeout(() => setMarksheetStatus(''), 3000)
+    }
   }
 
   const getGrade = (marks) => {
@@ -109,6 +222,7 @@ const Results = ({ role }) => {
       const records = Object.entries(editingMarks).map(([subject, marks]) => ({ subject, marks }))
       await apiClient.post('/api/results', { studentId: selectedStudent, records })
       setSaveSuccess(true)
+      showToast({ type: 'success', message: 'Marks updated successfully' })
       await fetchResults(selectedStudent)
       setTimeout(() => {
         setSaveSuccess(false)
@@ -117,6 +231,7 @@ const Results = ({ role }) => {
     } catch (error) {
       console.error('Error saving marks:', error)
       setSaveError('Failed to save marks')
+      showToast({ type: 'error', message: 'Failed to save marks' })
     }
   }
 
@@ -199,18 +314,42 @@ const Results = ({ role }) => {
             </table>
           </div>
         </div>
-
-        {(role === 'teacher' || role === 'admin') && (
-          <button
-            onClick={openEditModal}
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center gap-2"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-            </svg>
-            Edit Marks
-          </button>
-        )}
+        <div className="flex flex-col md:flex-col items-stretch gap-3 md:ml-4 md:w-64 mt-4 md:mt-0">
+          {(role === 'teacher' || role === 'admin') && (
+            <button
+              onClick={openEditModal}
+              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center gap-2 justify-center"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+              Edit Marks
+            </button>
+          )}
+          {role === 'student' && (
+            <>
+              <button
+                onClick={handlePrintMarksheet}
+                disabled={!resultsList.length}
+                className="px-6 py-2 bg-gray-800 text-white rounded-lg hover:bg-black transition flex items-center gap-2 justify-center disabled:opacity-60"
+              >
+                <Printer className="w-5 h-5" />
+                Print Marksheet
+              </button>
+              <button
+                onClick={handleEmailMarksheet}
+                disabled={!resultsList.length}
+                className="px-6 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition flex items-center gap-2 justify-center disabled:opacity-60"
+              >
+                <Mail className="w-5 h-5" />
+                Email Copy
+              </button>
+            </>
+          )}
+          {marksheetStatus && role === 'student' && (
+            <p className="text-xs text-gray-600 mt-1 text-center">{marksheetStatus}</p>
+          )}
+        </div>
       </div>
 
       {editModalOpen && (
