@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useMemo, useState, startTransition } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   DollarSign,
@@ -11,24 +11,28 @@ import {
   Smartphone,
   Download,
 } from "lucide-react";
-import { feeRecords, students } from "@/data/mockData";
 import jsPDF from "jspdf";
 import { useAuth } from "@/app/providers/AuthProvider";
 import { useToast } from "@/components/common/Toast/ToastProvider";
+import { useApiClient } from "@/components/providers/ApiClientProvider";
 
 const Fees = ({ role }) => {
   const { user } = useAuth();
   const { showToast } = useToast();
+  const apiClient = useApiClient();
+  const projectName = process.env.NEXT_PUBLIC_PROJECT_NAME || "School Management System";
 
-  const [selectedStudent, setSelectedStudent] = useState(
-    role === "student" ? user?.id || "S001" : students[0]?.id
-  );
+  const [classesList, setClassesList] = useState([]);
+  const [studentsList, setStudentsList] = useState([]);
+  const [selectedClass, setSelectedClass] = useState("");
+  const [selectedStudent, setSelectedStudent] = useState("");
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedFee, setSelectedFee] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState("card");
   const [processing, setProcessing] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [transactionDetails, setTransactionDetails] = useState(null);
+  const [fees, setFees] = useState([]);
 
   const [cardDetails, setCardDetails] = useState({
     number: "",
@@ -39,8 +43,85 @@ const Fees = ({ role }) => {
 
   const [upiId, setUpiId] = useState("");
 
-  // Filter fees
-  const studentFees = feeRecords.filter((f) => f.studentId === selectedStudent);
+  const fetchClasses = useCallback(async () => {
+    try {
+      const res = await apiClient.get("/api/classes");
+      const list = (res.data || []).map((c) => c.name);
+      startTransition(() => {
+        setClassesList(list);
+        if (!selectedClass && list.length) {
+          setSelectedClass(list[0]);
+        }
+      });
+    } catch (error) {
+      console.error("Error loading classes for fees:", error);
+      showToast({ type: "error", message: "Failed to load classes" });
+    }
+  }, [apiClient, selectedClass, showToast]);
+
+  const fetchStudents = useCallback(
+    async (cls) => {
+      try {
+        const params = [];
+        if (role === "student" && user?.email) {
+          params.push(`email=${encodeURIComponent(user.email)}`);
+        } else if (cls) {
+          params.push(`class=${encodeURIComponent(cls)}`);
+        }
+        const query = params.length ? `?${params.join("&")}` : "";
+        const res = await apiClient.get(`/api/students${query}`);
+        const list = res.data || [];
+        startTransition(() => {
+          setStudentsList(list);
+          if (role === "student" && user?.email) {
+            const byEmail = list.find((s) => s.email === user.email);
+            if (byEmail) {
+              setSelectedStudent(byEmail._id);
+            }
+          } else if (!selectedStudent && list.length) {
+            setSelectedStudent(list[0]._id);
+          }
+        });
+      } catch (error) {
+        console.error("Error loading students for fees:", error);
+        showToast({ type: "error", message: "Failed to load students" });
+      }
+    },
+    [apiClient, role, user, selectedStudent, showToast]
+  );
+
+  useEffect(() => {
+    fetchClasses();
+  }, [fetchClasses]);
+
+  useEffect(() => {
+    fetchStudents(selectedClass);
+  }, [fetchStudents, selectedClass]);
+
+  useEffect(() => {
+    const loadFees = async () => {
+      if (!selectedStudent) return;
+      try {
+        const res = await apiClient.get(
+          `/api/fees?studentId=${encodeURIComponent(selectedStudent)}`
+        );
+        setFees(res.data || []);
+      } catch (error) {
+        console.error("Error loading fees:", error);
+        showToast({ type: "error", message: "Failed to load fees" });
+      }
+    };
+    loadFees();
+  }, [apiClient, selectedStudent, showToast]);
+
+  const filteredStudents = useMemo(() => studentsList, [studentsList]);
+
+  const selectedStudentObj = useMemo(
+    () => studentsList.find((s) => s._id === selectedStudent) || null,
+    [studentsList, selectedStudent]
+  );
+
+  const studentFees = useMemo(() => fees, [fees]);
 
   const totalFees = studentFees.reduce((sum, f) => sum + f.amount, 0);
   const paidFees = studentFees
@@ -101,16 +182,21 @@ const Fees = ({ role }) => {
       feeType: selectedFee?.type || "",
     };
 
-    const feeIndex = selectedFee
-      ? feeRecords.findIndex(
-          (f) => f.studentId === selectedStudent && f.type === selectedFee.type
-        )
-      : -1;
-
-    if (feeIndex !== -1) {
-      feeRecords[feeIndex].status = "paid";
-      feeRecords[feeIndex].paidDate = new Date().toLocaleDateString();
-      feeRecords[feeIndex].transactionId = transaction.id;
+    try {
+      if (selectedFee?._id) {
+        await apiClient.put(`/api/fees/${selectedFee._id}`, {
+          status: "paid",
+          paidDate: new Date().toISOString(),
+          transactionId: transaction.id,
+        });
+      }
+      const res = await apiClient.get(
+        `/api/fees?studentId=${encodeURIComponent(selectedStudent)}`
+      );
+      setFees(res.data || []);
+    } catch (error) {
+      console.error("Error updating fee payment:", error);
+      showToast({ type: "error", message: "Failed to update fee status" });
     }
 
     setTransactionDetails(transaction);
@@ -125,13 +211,17 @@ const Fees = ({ role }) => {
       return;
     }
     const doc = new jsPDF();
-    const student = students.find((s) => s.id === selectedStudent) || { name: "", id: selectedStudent };
+    const student =
+      studentsList.find((s) => s._id === selectedStudent) || {
+        name: "",
+        _id: selectedStudent,
+      };
 
     doc.setFontSize(20);
     doc.text("PAYMENT RECEIPT", 105, 20, { align: "center" });
 
     doc.setFontSize(10);
-    doc.text("School Management System", 105, 28, { align: "center" });
+    doc.text(projectName, 105, 28, { align: "center" });
     doc.text("123 Education Street, Springfield", 105, 34, {
       align: "center",
     });
@@ -145,7 +235,7 @@ const Fees = ({ role }) => {
       ["Transaction ID:", String(transactionDetails.id || "")],
       ["Date:", new Date(transactionDetails.date || Date.now()).toLocaleString()],
       ["Student Name:", String(student.name || "")],
-      ["Student ID:", String(student.id || "")],
+      ["Student ID:", String(student._id || "")],
       ["Fee Type:", String(transactionDetails.feeType || "")],
       ["Amount Paid:", `$${Number(transactionDetails.amount || 0)}`],
       ["Payment Method:", String((transactionDetails.method || "").toUpperCase())],
@@ -194,17 +284,31 @@ const Fees = ({ role }) => {
         <h1 className="text-3xl font-bold text-gray-800">Fee Management</h1>
 
         {role !== "student" && (
-          <select
-            value={selectedStudent}
-            onChange={(e) => setSelectedStudent(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg"
-          >
-            {students.map((student) => (
-              <option value={student.id} key={student.id}>
-                {student.name}
-              </option>
-            ))}
-          </select>
+          <div className="flex items-center gap-3">
+            <select
+              value={selectedClass}
+              onChange={(e) => setSelectedClass(e.target.value)}
+              className="px-4 py-2 border border-gray-300 rounded-lg"
+            >
+              {classesList.map((cls) => (
+                <option value={cls} key={cls}>
+                  {cls}
+                </option>
+              ))}
+            </select>
+
+            <select
+              value={selectedStudent}
+              onChange={(e) => setSelectedStudent(e.target.value)}
+              className="px-4 py-2 border border-gray-300 rounded-lg"
+            >
+              {filteredStudents.map((student) => (
+                <option value={student._id} key={student._id}>
+                  {student.name}
+                </option>
+              ))}
+            </select>
+          </div>
         )}
       </div>
 

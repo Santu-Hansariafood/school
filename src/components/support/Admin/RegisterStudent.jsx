@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import { UserPlus, Edit, Trash2 } from 'lucide-react'
 import { useApiClient } from '@/components/providers/ApiClientProvider'
-import { classes as mockClasses } from '@/data/mockData'
 import { useToast } from '@/components/common/Toast/ToastProvider'
 
 const RegisterStudent = ({ availableClasses }) => {
@@ -116,7 +115,7 @@ const RegisterStudent = ({ availableClasses }) => {
     }
   }
 
-  const [classOptions, setClassOptions] = useState(availableClasses || mockClasses)
+  const [classOptions, setClassOptions] = useState(availableClasses || [])
 
   useEffect(() => {
     const fetchClasses = async () => {
@@ -125,7 +124,7 @@ const RegisterStudent = ({ availableClasses }) => {
         const names = (res.data || []).map(c => c.name)
         if (names.length > 0) setClassOptions(names)
       } catch {
-        setClassOptions(availableClasses || mockClasses)
+        setClassOptions(availableClasses || [])
       }
     }
     fetchClasses()

@@ -1,14 +1,59 @@
-import { useState } from 'react'
+import { useState, useEffect, useCallback, useMemo, startTransition } from 'react'
 import { motion } from 'framer-motion'
-import { students, teachers } from '@/data/mockData'
+import { useApiClient } from '@/components/providers/ApiClientProvider'
+import { useToast } from '@/components/common/Toast/ToastProvider'
 
 const AssignStudents = () => {
+  const apiClient = useApiClient()
+  const { showToast } = useToast()
   const [selectedClass, setSelectedClass] = useState('all')
   const [studentAssignments, setStudentAssignments] = useState([])
-  const classes = ['all', ...new Set(students.map(s => s.class))]
+  const [studentsList, setStudentsList] = useState([])
+  const [teachersList, setTeachersList] = useState([])
 
-  const filteredStudents = selectedClass === 'all' ? students : students.filter(s => s.class === selectedClass)
-  const availableTeachers = teachers.filter(t => selectedClass === 'all' || t.assignedClasses?.includes(selectedClass))
+  const loadStudents = useCallback(async () => {
+    try {
+      const res = await apiClient.get('/api/students')
+      const list = res.data || []
+      startTransition(() => {
+        setStudentsList(list)
+      })
+    } catch (error) {
+      console.error('Error loading students for assignment:', error)
+      showToast({ type: 'error', message: 'Failed to load students' })
+    }
+  }, [apiClient, showToast])
+
+  const loadTeachers = useCallback(async () => {
+    try {
+      const res = await apiClient.get('/api/teachers')
+      const list = res.data || []
+      startTransition(() => {
+        setTeachersList(list)
+      })
+    } catch (error) {
+      console.error('Error loading teachers for assignment:', error)
+      showToast({ type: 'error', message: 'Failed to load teachers' })
+    }
+  }, [apiClient, showToast])
+
+  useEffect(() => {
+    loadStudents()
+    loadTeachers()
+  }, [loadStudents, loadTeachers])
+
+  const classes = useMemo(
+    () => ['all', ...new Set(studentsList.map(s => s.class))],
+    [studentsList]
+  )
+
+  const filteredStudents = selectedClass === 'all'
+    ? studentsList
+    : studentsList.filter(s => s.class === selectedClass)
+
+  const availableTeachers = teachersList.filter(
+    t => selectedClass === 'all' || t.assignedClasses?.includes(selectedClass)
+  )
 
   const handleAssign = (studentId, teacherId) => {
     setStudentAssignments(prev => {
@@ -38,11 +83,11 @@ const AssignStudents = () => {
           <h2 className="text-xl font-semibold mb-4 text-gray-800">Students ({filteredStudents.length})</h2>
           <div className="space-y-3 max-h-96 overflow-y-auto">
             {filteredStudents.map(student => {
-              const assignment = studentAssignments.find(a => a.studentId === student.id)
-              const assignedTeacher = assignment ? teachers.find(t => t.id === assignment.teacherId) : null
+              const assignment = studentAssignments.find(a => a.studentId === student._id)
+              const assignedTeacher = assignment ? teachersList.find(t => t._id === assignment.teacherId) : null
 
               return (
-                <motion.div key={student.id} whileHover={{ scale: 1.02 }} className="p-4 border border-gray-200 rounded-lg hover:border-blue-400 transition">
+                <motion.div key={student._id} whileHover={{ scale: 1.02 }} className="p-4 border border-gray-200 rounded-lg hover:border-blue-400 transition">
                   <div className="flex justify-between items-start mb-2">
                     <div>
                       <p className="font-semibold text-gray-800">{student.name}</p>
@@ -67,10 +112,10 @@ const AssignStudents = () => {
           <h2 className="text-xl font-semibold mb-4 text-gray-800">Available Teachers</h2>
           <div className="space-y-3 max-h-96 overflow-y-auto">
             {availableTeachers.map(teacher => {
-              const assignedCount = studentAssignments.filter(a => a.teacherId === teacher.id).length
+              const assignedCount = studentAssignments.filter(a => a.teacherId === teacher._id).length
 
               return (
-                <motion.div key={teacher.id} whileHover={{ scale: 1.02 }} className="p-4 bg-blue-50 rounded-lg hover:bg-blue-100 transition cursor-pointer">
+                <motion.div key={teacher._id} whileHover={{ scale: 1.02 }} className="p-4 bg-blue-50 rounded-lg hover:bg-blue-100 transition cursor-pointer">
                   <div className="flex justify-between items-start">
                     <div>
                       <p className="font-semibold text-gray-800">{teacher.name}</p>
@@ -104,7 +149,7 @@ const AssignStudents = () => {
             }}>
               <option value="">Choose a student...</option>
               {filteredStudents.map(s => (
-                <option key={s.id} value={s.id}>{s.name} - {s.class}</option>
+                <option key={s._id} value={s._id}>{s.name} - {s.class}</option>
               ))}
             </select>
           </div>
@@ -119,7 +164,7 @@ const AssignStudents = () => {
             }}>
               <option value="">Choose a teacher...</option>
               {availableTeachers.map(t => (
-                <option key={t.id} value={t.id}>{t.name} - {t.subject}</option>
+                <option key={t._id} value={t._id}>{t.name} - {t.subject}</option>
               ))}
             </select>
           </div>
@@ -130,4 +175,3 @@ const AssignStudents = () => {
 }
 
 export default AssignStudents
-

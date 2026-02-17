@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { GraduationCap, Mail, Loader2, Shield, User } from 'lucide-react'
 import { createApiClient } from '@/lib/axiosInstance'
@@ -14,6 +14,7 @@ const Login = ({ onLogin, apiKey }) => {
 
   const otpCode = otpDigits.join('')
   const roleLabel = role.charAt(0).toUpperCase() + role.slice(1)
+  const otpRefs = useRef([])
 
   const handleOtpChange = (index, value) => {
     const digit = value.replace(/\D/g, '').slice(-1)
@@ -22,6 +23,17 @@ const Login = ({ onLogin, apiKey }) => {
       next[index] = digit
       return next
     })
+    if (digit && index < otpDigits.length - 1) {
+      const nextInput = otpRefs.current[index + 1]
+      if (nextInput) nextInput.focus()
+    }
+  }
+
+  const handleOtpKeyDown = (index, event) => {
+    if (event.key === 'Backspace' && !otpDigits[index] && index > 0) {
+      const prevInput = otpRefs.current[index - 1]
+      if (prevInput) prevInput.focus()
+    }
   }
 
   return (
@@ -174,11 +186,13 @@ const Login = ({ onLogin, apiKey }) => {
                     {otpDigits.map((digit, index) => (
                       <input
                         key={index}
+                        ref={(el) => { otpRefs.current[index] = el }}
                         type="text"
                         inputMode="numeric"
                         maxLength={1}
                         value={digit}
                         onChange={(e)=>handleOtpChange(index, e.target.value)}
+                        onKeyDown={(e)=>handleOtpKeyDown(index, e)}
                         className="w-10 h-11 sm:w-11 sm:h-11 border-2 border-gray-200 rounded-xl text-center text-lg font-mono focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none transition-all"
                       />
                     ))}

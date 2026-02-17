@@ -1,8 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import { UserPlus, Edit, Trash2 } from 'lucide-react'
 import { useApiClient } from '@/components/providers/ApiClientProvider'
-import { students as mockStudents, teachers as mockTeachers } from '@/data/mockData'
 import { useToast } from '@/components/common/Toast/ToastProvider'
 
 const RegisterTeacher = () => {
@@ -30,34 +29,28 @@ const RegisterTeacher = () => {
   const [formData, setFormData] = useState(initialFormState)
   const [classOptions, setClassOptions] = useState([])
 
+  const fetchTeachers = useCallback(async () => {
+    try {
+      const response = await apiClient.get('/api/teachers')
+      setTeachersList(response.data || [])
+    } catch (error) {
+      console.error('Error fetching teachers:', error)
+    }
+  }, [apiClient])
+
   useEffect(() => {
-    fetchTeachers()
     const fetchClasses = async () => {
       try {
         const res = await apiClient.get('/api/classes')
         const names = (res.data || []).map(c => c.name)
-        setClassOptions(names.length > 0 ? names : Array.from(new Set([
-          ...mockStudents.map(s => s.class),
-          ...mockTeachers.flatMap(t => t.assignedClasses || [])
-        ])).sort())
+        setClassOptions(names)
       } catch {
-        setClassOptions(Array.from(new Set([
-          ...mockStudents.map(s => s.class),
-          ...mockTeachers.flatMap(t => t.assignedClasses || [])
-        ])).sort())
+        setClassOptions([])
       }
     }
+    fetchTeachers()
     fetchClasses()
-  }, [])
-
-  const fetchTeachers = async () => {
-    try {
-      const response = await apiClient.get('/api/teachers')
-      setTeachersList(response.data)
-    } catch (error) {
-      console.error('Error fetching teachers:', error)
-    }
-  }
+  }, [apiClient, fetchTeachers])
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value })
