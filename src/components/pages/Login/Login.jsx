@@ -16,6 +16,13 @@ const Login = ({ onLogin, apiKey }) => {
   const roleLabel = role.charAt(0).toUpperCase() + role.slice(1)
   const otpRefs = useRef([])
 
+  const rolePlaceholder =
+    role === 'admin'
+      ? 'admin@example.com'
+      : role === 'teacher'
+      ? 'teacher@school.com'
+      : 'student@school.com'
+
   const handleOtpChange = (index, value) => {
     const digit = value.replace(/\D/g, '').slice(-1)
     setOtpDigits(prev => {
@@ -37,7 +44,7 @@ const Login = ({ onLogin, apiKey }) => {
   }
 
   return (
-    <div className="relative min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 overflow-hidden px-4 py-8 flex items-center">
+    <div className="relative min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 overflow-hidden px-4 py-6 sm:py-8 flex items-center justify-center">
       <div aria-hidden className="pointer-events-none absolute -top-32 -left-24 w-80 h-80 rounded-full bg-blue-300/30 blur-3xl" />
       <div aria-hidden className="pointer-events-none absolute -bottom-40 -right-10 w-96 h-96 rounded-full bg-indigo-300/30 blur-3xl" />
       <div className="relative z-10 mx-auto w-full max-w-6xl grid lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] gap-10 items-center">
@@ -94,7 +101,7 @@ const Login = ({ onLogin, apiKey }) => {
         <motion.div
           initial={{ opacity: 0, x: 30 }}
           animate={{ opacity: 1, x: 0 }}
-          className="w-full max-w-md justify-self-center bg-white rounded-3xl shadow-2xl border border-gray-100 overflow-hidden"
+          className="w-full max-w-md justify-self-center bg-white rounded-2xl sm:rounded-3xl shadow-xl sm:shadow-2xl border border-gray-100 overflow-hidden"
         >
           <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-5">
             <div className="flex items-center">
@@ -144,7 +151,8 @@ const Login = ({ onLogin, apiKey }) => {
                   type="email"
                   value={email}
                   onChange={(e)=>setEmail(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none transition-all"
+                  placeholder={rolePlaceholder}
+                  className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none transition-all text-sm sm:text-base"
                   required
                 />
               </div>
