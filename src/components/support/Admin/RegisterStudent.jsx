@@ -1,8 +1,9 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { motion } from 'framer-motion'
 import { UserPlus, Edit, Trash2 } from 'lucide-react'
 import { useApiClient } from '@/components/providers/ApiClientProvider'
 import { useToast } from '@/components/common/Toast/ToastProvider'
+import Pagination from '@/components/common/Pagination/Pagination'
 
 const RegisterStudent = ({ availableClasses }) => {
   const apiClient = useApiClient()
@@ -29,11 +30,15 @@ const RegisterStudent = ({ availableClasses }) => {
   
   const [formData, setFormData] = useState(initialFormState)
   const [status, setStatus] = useState({ type: '', message: '' })
+  const [selectedFilterClass, setSelectedFilterClass] = useState('all')
+  const [currentPage, setCurrentPage] = useState(1)
+  const pageSize = 20
 
   const fetchStudents = useCallback(async () => {
     try {
       const response = await apiClient.get('/api/students')
       setStudentsList(response.data)
+      setCurrentPage(1)
     } catch (error) {
       console.error('Error fetching students:', error)
     }
@@ -129,6 +134,30 @@ const RegisterStudent = ({ availableClasses }) => {
     }
     fetchClasses()
   }, [apiClient, availableClasses])
+
+  const filterOptions = useMemo(
+    () => ['all', ...Array.from(new Set(classOptions))],
+    [classOptions]
+  )
+
+  const filteredStudents = useMemo(
+    () =>
+      selectedFilterClass === 'all'
+        ? studentsList
+        : studentsList.filter(s => s.class === selectedFilterClass),
+    [studentsList, selectedFilterClass]
+  )
+
+  const pagedStudents = useMemo(() => {
+    const start = (currentPage - 1) * pageSize
+    const end = start + pageSize
+    return filteredStudents.slice(start, end)
+  }, [filteredStudents, currentPage, pageSize])
+
+  const handleFilterChange = (value) => {
+    setSelectedFilterClass(value)
+    setCurrentPage(1)
+  }
 
   return (
     <div>
@@ -244,7 +273,23 @@ const RegisterStudent = ({ availableClasses }) => {
 
       {/* List of Registered Students */}
       <div className="bg-white rounded-xl shadow-md p-6">
-        <h2 className="text-2xl font-bold text-gray-800 mb-4">Registered Students</h2>
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
+          <h2 className="text-2xl font-bold text-gray-800">Registered Students</h2>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-600">Filter by Class</span>
+            <select
+              value={selectedFilterClass}
+              onChange={(e) => handleFilterChange(e.target.value)}
+              className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              {filterOptions.map(cls => (
+                <option key={cls} value={cls}>
+                  {cls === 'all' ? 'All Classes' : cls}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
@@ -257,12 +302,12 @@ const RegisterStudent = ({ availableClasses }) => {
               </tr>
             </thead>
             <tbody>
-              {studentsList.length === 0 ? (
+              {filteredStudents.length === 0 ? (
                 <tr>
                   <td colSpan="5" className="p-4 text-center text-gray-500">No students found.</td>
                 </tr>
               ) : (
-                studentsList.map(student => (
+                pagedStudents.map(student => (
                   <tr key={student._id} className="border-b hover:bg-gray-50">
                     <td className="p-3">{student.name}</td>
                     <td className="p-3">{student.class}</td>
@@ -290,6 +335,12 @@ const RegisterStudent = ({ availableClasses }) => {
             </tbody>
           </table>
         </div>
+        <Pagination
+          currentPage={currentPage}
+          pageSize={pageSize}
+          totalItems={filteredStudents.length}
+          onPageChange={setCurrentPage}
+        />
       </div>
     </div>
   )

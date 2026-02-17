@@ -12,11 +12,41 @@ export async function GET(request) {
 
     const { searchParams } = new URL(request.url)
     const status = searchParams.get("status")
+    const pageParam = searchParams.get("page")
+    const limitParam = searchParams.get("limit")
 
     const query = {}
     if (status) query.status = status
 
+    const page = pageParam ? parseInt(pageParam, 10) : null
+    const limit = limitParam ? parseInt(limitParam, 10) : null
+    const usePagination = Number.isInteger(page) && page > 0 && Number.isInteger(limit) && limit > 0
+
     await connectDB()
+
+    if (usePagination) {
+      const [books, total] = await Promise.all([
+        Book.find(query)
+          .sort({ createdAt: -1 })
+          .skip((page - 1) * limit)
+          .limit(limit),
+        Book.countDocuments(query),
+      ])
+
+      const totalPages = total > 0 ? Math.ceil(total / limit) : 1
+
+      return NextResponse.json(
+        {
+          data: books,
+          total,
+          page,
+          limit,
+          totalPages,
+        },
+        { status: 200 }
+      )
+    }
+
     const books = await Book.find(query).sort({ createdAt: -1 })
     return NextResponse.json(books, { status: 200 })
   } catch (error) {
@@ -42,4 +72,3 @@ export async function POST(request) {
     return NextResponse.json({ message: "Internal server error" }, { status: 500 })
   }
 }
-

@@ -210,8 +210,8 @@ const Login = ({ onLogin, apiKey }) => {
                         try {
                           const api = createApiClient(apiKey)
                           const res = await api.post('/api/auth/verify-otp', { email, role, otp: otpCode })
-                          const { user } = res.data
-                          onLogin(user)
+                          const { user, token, loginDay } = res.data
+                          onLogin({ user, token, loginDay })
                         } catch (e) {
                           const status = e?.response?.status
                           const msg = e?.response?.data?.message || 'Invalid OTP'

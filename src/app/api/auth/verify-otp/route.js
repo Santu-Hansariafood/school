@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import jwt from "jsonwebtoken"
 import { connectDB } from "@/lib/mongodb"
 import AdminOTP from "@/models/AdminOTP"
 import User from "@/models/User"
@@ -87,7 +88,23 @@ export async function POST(request) {
       }
     }
 
-    return NextResponse.json({ user: safeUser }, { status: 200 })
+    const jwtSecret = process.env.JWT_SECRET
+    if (!jwtSecret) {
+      console.error("Missing JWT_SECRET env var")
+      return NextResponse.json({ message: "Server configuration error" }, { status: 500 })
+    }
+
+    const today = new Date().toISOString().slice(0, 10)
+    const tokenPayload = {
+      sub: safeUser.id,
+      role: safeUser.role,
+      email: safeUser.email,
+      loginDay: today,
+    }
+
+    const token = jwt.sign(tokenPayload, jwtSecret, { expiresIn: "1d" })
+
+    return NextResponse.json({ user: safeUser, token, loginDay: today }, { status: 200 })
   } catch (error) {
     console.error("verify-otp error", error)
     return NextResponse.json({ message: "Internal server error" }, { status: 500 })

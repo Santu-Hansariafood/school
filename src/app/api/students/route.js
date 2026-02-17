@@ -15,6 +15,8 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url)
     const classFilter = searchParams.get("class")
     const email = searchParams.get("email")
+    const pageParam = searchParams.get("page")
+    const limitParam = searchParams.get("limit")
 
     const query = {}
     if (classFilter) {
@@ -24,7 +26,35 @@ export async function GET(request) {
       query.email = email
     }
 
+    const page = pageParam ? parseInt(pageParam, 10) : null
+    const limit = limitParam ? parseInt(limitParam, 10) : null
+    const usePagination = Number.isInteger(page) && page > 0 && Number.isInteger(limit) && limit > 0
+
     await connectDB()
+
+    if (usePagination) {
+      const [students, total] = await Promise.all([
+        Student.find(query)
+          .sort({ createdAt: -1 })
+          .skip((page - 1) * limit)
+          .limit(limit),
+        Student.countDocuments(query),
+      ])
+
+      const totalPages = total > 0 ? Math.ceil(total / limit) : 1
+
+      return NextResponse.json(
+        {
+          data: students,
+          total,
+          page,
+          limit,
+          totalPages,
+        },
+        { status: 200 }
+      )
+    }
+
     const students = await Student.find(query).sort({ createdAt: -1 })
     return NextResponse.json(students, { status: 200 })
   } catch (error) {

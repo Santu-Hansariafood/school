@@ -15,12 +15,60 @@ export async function GET(request) {
     const studentId = searchParams.get("studentId")
     const withCounts = searchParams.get("withCounts") === "true"
     const classFilter = searchParams.get("class")
+    const pageParam = searchParams.get("page")
+    const limitParam = searchParams.get("limit")
 
     const query = {}
     if (studentId) query.assignedTo = studentId
     if (classFilter) query.class = classFilter
 
+    const page = pageParam ? parseInt(pageParam, 10) : null
+    const limit = limitParam ? parseInt(limitParam, 10) : null
+    const usePagination = Number.isInteger(page) && page > 0 && Number.isInteger(limit) && limit > 0
+
     await connectDB()
+
+    if (usePagination) {
+      const [assignments, total] = await Promise.all([
+        Assignment.find(query)
+          .sort({ createdAt: -1 })
+          .skip((page - 1) * limit)
+          .limit(limit)
+          .lean(),
+        Assignment.countDocuments(query),
+      ])
+
+      let result = assignments
+      if (withCounts && assignments.length > 0) {
+        const ids = assignments.map(a => a._id)
+        const counts = await AssignmentSubmission.aggregate([
+          { $match: { assignmentId: { $in: ids } } },
+          { $group: { _id: "$assignmentId", count: { $sum: 1 } } },
+        ])
+        const countMap = counts.reduce((acc, c) => {
+          acc[c._id.toString()] = c.count
+          return acc
+        }, {})
+        result = assignments.map(a => ({
+          ...a,
+          submittedCount: countMap[a._id.toString()] || 0,
+        }))
+      }
+
+      const totalPages = total > 0 ? Math.ceil(total / limit) : 1
+
+      return NextResponse.json(
+        {
+          data: result,
+          total,
+          page,
+          limit,
+          totalPages,
+        },
+        { status: 200 }
+      )
+    }
+
     const assignments = await Assignment.find(query).sort({ createdAt: -1 }).lean()
 
     if (withCounts && assignments.length > 0) {

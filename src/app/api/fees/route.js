@@ -13,12 +13,42 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url)
     const studentId = searchParams.get("studentId")
     const status = searchParams.get("status")
+    const pageParam = searchParams.get("page")
+    const limitParam = searchParams.get("limit")
 
     const query = {}
     if (studentId) query.studentId = studentId
     if (status) query.status = status
 
+    const page = pageParam ? parseInt(pageParam, 10) : null
+    const limit = limitParam ? parseInt(limitParam, 10) : null
+    const usePagination = Number.isInteger(page) && page > 0 && Number.isInteger(limit) && limit > 0
+
     await connectDB()
+
+    if (usePagination) {
+      const [fees, total] = await Promise.all([
+        Fee.find(query)
+          .sort({ dueDate: 1 })
+          .skip((page - 1) * limit)
+          .limit(limit),
+        Fee.countDocuments(query),
+      ])
+
+      const totalPages = total > 0 ? Math.ceil(total / limit) : 1
+
+      return NextResponse.json(
+        {
+          data: fees,
+          total,
+          page,
+          limit,
+          totalPages,
+        },
+        { status: 200 }
+      )
+    }
+
     const fees = await Fee.find(query).sort({ dueDate: 1 })
     return NextResponse.json(fees, { status: 200 })
   } catch (error) {
@@ -50,4 +80,3 @@ export async function POST(request) {
     return NextResponse.json({ message: "Internal server error" }, { status: 500 })
   }
 }
-

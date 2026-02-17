@@ -14,10 +14,41 @@ export async function GET(request) {
 
     const { searchParams } = new URL(request.url)
     const email = searchParams.get("email")
+    const pageParam = searchParams.get("page")
+    const limitParam = searchParams.get("limit")
+
     const query = {}
     if (email) query.email = email
 
+    const page = pageParam ? parseInt(pageParam, 10) : null
+    const limit = limitParam ? parseInt(limitParam, 10) : null
+    const usePagination = Number.isInteger(page) && page > 0 && Number.isInteger(limit) && limit > 0
+
     await connectDB()
+
+    if (usePagination) {
+      const [teachers, total] = await Promise.all([
+        Teacher.find(query)
+          .sort({ createdAt: -1 })
+          .skip((page - 1) * limit)
+          .limit(limit),
+        Teacher.countDocuments(query),
+      ])
+
+      const totalPages = total > 0 ? Math.ceil(total / limit) : 1
+
+      return NextResponse.json(
+        {
+          data: teachers,
+          total,
+          page,
+          limit,
+          totalPages,
+        },
+        { status: 200 }
+      )
+    }
+
     const teachers = await Teacher.find(query).sort({ createdAt: -1 })
     return NextResponse.json(teachers, { status: 200 })
   } catch (error) {

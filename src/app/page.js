@@ -13,5 +13,16 @@ export default function Page() {
     if (user?.role) router.replace(`/${user.role}`)
   }, [user, router])
 
-  return <Login apiKey={apiKey} onLogin={(u) => { login(u); router.replace(`/${u.role}`) }} />
+  return (
+    <Login
+      apiKey={apiKey}
+      onLogin={(authData) => {
+        login(authData)
+        const nextRole = authData?.user?.role || authData?.role
+        if (nextRole) {
+          router.replace(`/${nextRole}`)
+        }
+      }}
+    />
+  )
 }
