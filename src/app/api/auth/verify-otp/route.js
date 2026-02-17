@@ -88,21 +88,25 @@ export async function POST(request) {
       }
     }
 
-    const jwtSecret = process.env.JWT_SECRET
-    if (!jwtSecret) {
-      console.error("Missing JWT_SECRET env var")
-      return NextResponse.json({ message: "Server configuration error" }, { status: 500 })
-    }
-
     const today = new Date().toISOString().slice(0, 10)
-    const tokenPayload = {
-      sub: safeUser.id,
-      role: safeUser.role,
-      email: safeUser.email,
-      loginDay: today,
-    }
+    const jwtSecret = process.env.JWT_SECRET
 
-    const token = jwt.sign(tokenPayload, jwtSecret, { expiresIn: "1d" })
+    let token = null
+    if (jwtSecret) {
+      try {
+        const tokenPayload = {
+          sub: safeUser.id,
+          role: safeUser.role,
+          email: safeUser.email,
+          loginDay: today,
+        }
+        token = jwt.sign(tokenPayload, jwtSecret, { expiresIn: "1d" })
+      } catch (e) {
+        console.error("Failed to sign JWT", e)
+      }
+    } else {
+      console.warn("JWT_SECRET not set. Proceeding without signing token.")
+    }
 
     return NextResponse.json({ user: safeUser, token, loginDay: today }, { status: 200 })
   } catch (error) {

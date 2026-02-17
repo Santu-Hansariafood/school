@@ -19,9 +19,16 @@ export function otpEmailTemplate({ code, role, appName = "School Portal" }) {
         </div>
       </div>
       <div style="padding:28px;">
+        <p style="margin:0 0 8px 0;font-size:14px;color:#4b5563;font-family:Inter,Segoe UI,Arial,sans-serif;">Hello,</p>
         <h1 style="margin:0 0 8px 0;font-size:22px;line-height:28px;color:#111827;font-family:Inter,Segoe UI,Arial,sans-serif;">Your ${role} verification code</h1>
-        <p style="margin:0 0 20px 0;font-size:14px;color:#4b5563;font-family:Inter,Segoe UI,Arial,sans-serif;">Use this code to continue signing in. This code expires in 10 minutes.</p>
+        <p style="margin:0 0 20px 0;font-size:14px;color:#4b5563;font-family:Inter,Segoe UI,Arial,sans-serif;">Use this one-time code to securely sign in to ${appName}. This code expires in 10 minutes.</p>
         <div style="text-align:center;margin:20px 0;">${digits}</div>
+        <div style="margin-top:4px;text-align:center;">
+          <div style="display:inline-flex;align-items:center;gap:8px;padding:8px 16px;border-radius:999px;background:#1d4ed8;color:#eff6ff;font-size:13px;font-family:Inter,Segoe UI,Arial,sans-serif;">
+            <span style="font-weight:600;">Copy code</span>
+            <span style="padding:2px 10px;border-radius:6px;background:rgba(15,23,42,0.16);font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,'Liberation Mono','Courier New',monospace;letter-spacing:2px;font-size:15px;">${code}</span>
+          </div>
+        </div>
         <div style="margin-top:24px;padding:14px;border-radius:12px;background:#f1f5f9;border:1px solid #e2e8f0;">
           <p style="margin:0;font-size:13px;color:#334155;font-family:Inter,Segoe UI,Arial,sans-serif;">
             If you did not request this code, you can safely ignore this email.
