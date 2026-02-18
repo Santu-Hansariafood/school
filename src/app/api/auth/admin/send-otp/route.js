@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { connectDB } from "@/lib/mongodb"
 import AdminOTP from "@/models/AdminOTP"
+import User from "@/models/User"
 import nodemailer from "nodemailer"
 import { otpEmailTemplate } from "@/lib/emailTemplates"
 
@@ -35,6 +36,11 @@ export async function POST(request) {
     }
 
     await connectDB()
+
+    const user = await User.findOne({ email: email.toLowerCase(), role: "admin" }).lean()
+    if (!user) {
+      return NextResponse.json({ message: "Email not authorized for this role" }, { status: 403 })
+    }
 
     await AdminOTP.deleteMany({ email })
 

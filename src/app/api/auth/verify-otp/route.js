@@ -10,12 +10,19 @@ function parseAllowedAdmins() {
 }
 
 async function ensureAllowedAndFetch({ role, email }) {
+  const normalizedEmail = (email || "").toLowerCase()
+  await connectDB()
+
   if (role === "admin") {
     const allowed = parseAllowedAdmins()
-    return { allowed: allowed.includes(email.toLowerCase()), user: null }
+    if (!allowed.includes(normalizedEmail)) {
+      return { allowed: false, user: null }
+    }
+    const user = await User.findOne({ email: normalizedEmail, role: "admin" }).lean()
+    return { allowed: !!user, user }
   }
-  await connectDB()
-  const user = await User.findOne({ email, role }).lean()
+
+  const user = await User.findOne({ email: normalizedEmail, role }).lean()
   return { allowed: !!user, user }
 }
 
@@ -31,8 +38,6 @@ export async function POST(request) {
     if (!email || !role || !otp || !["admin", "teacher", "student"].includes(role)) {
       return NextResponse.json({ message: "Email, role and OTP are required" }, { status: 400 })
     }
-
-    await connectDB()
 
     const { allowed, user } = await ensureAllowedAndFetch({ role, email })
     if (!allowed) {
@@ -53,32 +58,23 @@ export async function POST(request) {
 
     await AdminOTP.deleteMany({ email })
 
+    if (!user) {
+      return NextResponse.json({ message: "User not found" }, { status: 404 })
+    }
+
     let safeUser
     if (role === "admin") {
-      if (user && user.role !== "admin") {
+      if (user.role !== "admin") {
         return NextResponse.json({ message: "Unauthorized role" }, { status: 403 })
       }
-      if (user) {
-        safeUser = {
-          id: user._id.toString(),
-          username: user.username,
-          name: user.name,
-          role: "admin",
-          email: user.email
-        }
-      } else {
-        safeUser = {
-          id: `admin:${email}`,
-          username: email,
-          name: "Admin",
-          role: "admin",
-          email
-        }
+      safeUser = {
+        id: user._id.toString(),
+        username: user.username,
+        name: user.name,
+        role: "admin",
+        email: user.email
       }
     } else {
-      if (!user) {
-        return NextResponse.json({ message: "User not found" }, { status: 404 })
-      }
       safeUser = {
         id: user._id.toString(),
         username: user.username,

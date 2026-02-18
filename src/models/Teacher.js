@@ -25,4 +25,8 @@ const TeacherSchema = new mongoose.Schema(
   { timestamps: true }
 )
 
+TeacherSchema.index({ email: 1 })
+TeacherSchema.index({ subject: 1 })
+TeacherSchema.index({ assignedClasses: 1 })
+
 export default mongoose.models.Teacher || mongoose.model("Teacher", TeacherSchema)

@@ -29,6 +29,11 @@ export async function POST(request) {
 
     await connectDB()
 
+    const user = await User.findOne({ email: email.toLowerCase(), role: "admin" }).lean()
+    if (!user) {
+      return NextResponse.json({ message: "Email not authorized for this role" }, { status: 403 })
+    }
+
     const record = await AdminOTP.findOne({ email }).lean()
     if (!record) {
       return NextResponse.json({ message: "Code not found or expired" }, { status: 400 })
@@ -46,26 +51,13 @@ export async function POST(request) {
 
     await AdminOTP.deleteMany({ email })
 
-    const user = await User.findOne({ email }).lean()
-    if (user && user.role !== "admin") {
-      return NextResponse.json({ message: "Unauthorized role" }, { status: 403 })
+    const safeUser = {
+      id: user._id.toString(),
+      username: user.username,
+      name: user.name,
+      role: "admin",
+      email: user.email
     }
-
-    const safeUser = user
-      ? {
-          id: user._id.toString(),
-          username: user.username,
-          name: user.name,
-          role: "admin",
-          email: user.email
-        }
-      : {
-          id: `admin:${email}`,
-          username: email,
-          name: "Admin",
-          role: "admin",
-          email
-        }
 
     return NextResponse.json({ user: safeUser }, { status: 200 })
   } catch (error) {

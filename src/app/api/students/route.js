@@ -16,7 +16,8 @@ export async function GET(request) {
 
     const { searchParams } = new URL(request.url)
     const classFilter = searchParams.get("class")
-    const email = searchParams.get("email")
+    const emailParam = searchParams.get("email")
+    const email = emailParam ? emailParam.toLowerCase() : null
     const q = searchParams.get("q")
     const pageParam = searchParams.get("page")
     const limitParam = searchParams.get("limit")
@@ -88,10 +89,15 @@ export async function POST(request) {
     await connectDB()
     const body = await request.json()
 
-    const { email, name } = body || {}
+    const rawEmail = (body?.email || "").trim()
+    const email = rawEmail.toLowerCase()
+    const { name } = body || {}
+
     if (!email || !name) {
       return NextResponse.json({ message: "Name and email are required" }, { status: 400 })
     }
+
+    body.email = email
 
     const existingUser = await User.findOne({ email })
     if (existingUser && existingUser.role !== "student") {

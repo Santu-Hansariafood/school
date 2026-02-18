@@ -18,4 +18,8 @@ const StudentSchema = new mongoose.Schema(
   { timestamps: true }
 )
 
+StudentSchema.index({ class: 1, createdAt: -1 })
+StudentSchema.index({ email: 1 })
+StudentSchema.index({ parentEmail: 1 })
+
 export default mongoose.models.Student || mongoose.model("Student", StudentSchema)

@@ -150,7 +150,7 @@ const Login = ({ onLogin, apiKey }) => {
                 <input
                   type="email"
                   value={email}
-                  onChange={(e)=>setEmail(e.target.value)}
+                  onChange={(e)=>setEmail(e.target.value.toLowerCase())}
                   placeholder={rolePlaceholder}
                   className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none transition-all text-sm sm:text-base"
                   required

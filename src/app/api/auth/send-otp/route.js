@@ -18,12 +18,19 @@ function parseAllowedAdmins() {
 }
 
 async function ensureAllowed({ role, email }) {
+  const normalizedEmail = (email || "").toLowerCase()
+  await connectDB()
+
   if (role === "admin") {
     const allowed = parseAllowedAdmins()
-    return allowed.includes(email.toLowerCase())
+    if (!allowed.includes(normalizedEmail)) {
+      return false
+    }
+    const user = await User.findOne({ email: normalizedEmail, role: "admin" }).lean()
+    return !!user
   }
-  await connectDB()
-  const user = await User.findOne({ email, role }).lean()
+
+  const user = await User.findOne({ email: normalizedEmail, role }).lean()
   return !!user
 }
 
