@@ -33,6 +33,10 @@ const Fees = ({ role }) => {
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [transactionDetails, setTransactionDetails] = useState(null);
   const [fees, setFees] = useState([]);
+  const [newFeeType, setNewFeeType] = useState("");
+  const [newFeeAmount, setNewFeeAmount] = useState("");
+  const [newFeeDueDate, setNewFeeDueDate] = useState("");
+  const [creatingFee, setCreatingFee] = useState(false);
 
   const [cardDetails, setCardDetails] = useState({
     number: "",
@@ -341,9 +345,118 @@ const Fees = ({ role }) => {
 
       {/* Fee Table */}
       <div className="bg-white rounded-xl shadow-md p-6">
-        <h2 className="text-xl font-semibold mb-4 text-gray-800">
-          Fee Details
-        </h2>
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
+          <h2 className="text-xl font-semibold text-gray-800">
+            Fee Details
+          </h2>
+          {role !== "student" && (
+            <form
+              className="flex flex-col md:flex-row gap-3 md:items-end"
+              onSubmit={async (e) => {
+                e.preventDefault();
+                if (!selectedClass || !newFeeType || !newFeeAmount || !newFeeDueDate) {
+                  showToast({
+                    type: "warning",
+                    message: "Please fill all fee fields",
+                  });
+                  return;
+                }
+                const amountNumber = Number(newFeeAmount);
+                if (Number.isNaN(amountNumber) || amountNumber <= 0) {
+                  showToast({
+                    type: "warning",
+                    message: "Amount must be a positive number",
+                  });
+                  return;
+                }
+                try {
+                  setCreatingFee(true);
+                  await apiClient.post("/api/fees", {
+                    className: selectedClass,
+                    type: newFeeType,
+                    amount: amountNumber,
+                    dueDate: newFeeDueDate,
+                    applyToClass: true,
+                  });
+                  showToast({
+                    type: "success",
+                    message: "Fees assigned to class students",
+                  });
+                  setNewFeeType("");
+                  setNewFeeAmount("");
+                  setNewFeeDueDate("");
+                  if (selectedStudent) {
+                    const res = await apiClient.get(
+                      `/api/fees?studentId=${encodeURIComponent(selectedStudent)}`
+                    );
+                    setFees(res.data || []);
+                  }
+                } catch (error) {
+                  console.error("Error assigning class fees:", error);
+                  showToast({
+                    type: "error",
+                    message: "Failed to assign fees to class",
+                  });
+                } finally {
+                  setCreatingFee(false);
+                }
+              }}
+            >
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-gray-600">
+                  Class
+                </label>
+                <div className="px-3 py-2 border border-gray-300 rounded-lg min-w-[120px] text-sm bg-gray-50">
+                  {selectedClass || "Select class"}
+                </div>
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-gray-600">
+                  Fee Type
+                </label>
+                <input
+                  type="text"
+                  value={newFeeType}
+                  onChange={(e) => setNewFeeType(e.target.value)}
+                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                  placeholder="e.g. Tuition Fee"
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-gray-600">
+                  Amount
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={newFeeAmount}
+                  onChange={(e) => setNewFeeAmount(e.target.value)}
+                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                  placeholder="Amount"
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-gray-600">
+                  Due Date
+                </label>
+                <input
+                  type="date"
+                  value={newFeeDueDate}
+                  onChange={(e) => setNewFeeDueDate(e.target.value)}
+                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={creatingFee}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50"
+              >
+                {creatingFee ? "Assigning..." : "Assign to Class"}
+              </button>
+            </form>
+          )}
+        </div>
 
         <div className="overflow-x-auto">
           <table className="w-full">

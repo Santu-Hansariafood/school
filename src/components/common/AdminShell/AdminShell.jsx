@@ -3,7 +3,7 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/app/providers/AuthProvider"
 import Sidebar from "@/components/common/Sidebar/Sidebar"
-import { Calendar, FileText, BookOpen, DollarSign, BarChart3, UserPlus, Plus } from "lucide-react"
+import { Calendar, FileText, BookOpen, DollarSign, BarChart3, UserPlus, Plus, Clock } from "lucide-react"
 
 export default function AdminShell({ children }) {
   const { user, logout } = useAuth()
@@ -19,10 +19,13 @@ export default function AdminShell({ children }) {
   const menuItems = [
     { icon: BarChart3, label: "Overview", path: "/admin" },
     { icon: Calendar, label: "Attendance", path: "/admin/attendance" },
+    { icon: Calendar, label: "Holidays", path: "/admin/holidays" },
+     { icon: Calendar, label: "Teacher Leaves", path: "/admin/teacher-leaves" },
     { icon: FileText, label: "Assignments", path: "/admin/assignments" },
     { icon: BookOpen, label: "Results", path: "/admin/results" },
     { icon: BookOpen, label: "Library", path: "/admin/library" },
     { icon: DollarSign, label: "Fees", path: "/admin/fees" },
+    { icon: Clock, label: "Roster", path: "/admin/roster" },
     { icon: Plus, label: "Create Class", path: "/admin/classes" },
     { icon: UserPlus, label: "Register Admin", path: "/admin/register-admin" },
     { icon: UserPlus, label: "Register Teacher", path: "/admin/register-teacher" },

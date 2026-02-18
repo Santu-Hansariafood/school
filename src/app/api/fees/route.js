@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { connectDB } from "@/lib/mongodb"
 import Fee from "@/models/Fee"
+import Student from "@/models/Student"
 
 export async function GET(request) {
   try {
@@ -68,12 +69,60 @@ export async function POST(request) {
     const body = await request.json()
     await connectDB()
 
-    const { studentId, studentEmail, type, amount, dueDate } = body || {}
+    const {
+      studentId,
+      studentEmail,
+      type,
+      amount,
+      dueDate,
+      className,
+      applyToClass,
+    } = body || {}
+
+    if (applyToClass && className) {
+      if (!type || !amount || !dueDate) {
+        return NextResponse.json({ message: "Missing required fee fields" }, { status: 400 })
+      }
+
+      const students = await Student.find({ class: className }).select("_id email")
+      if (!students.length) {
+        return NextResponse.json({ message: "No students found for this class" }, { status: 400 })
+      }
+
+      const docs = students.map((s) => ({
+        studentId: s._id,
+        studentEmail: s.email,
+        type,
+        amount,
+        dueDate,
+        status: "pending",
+      }))
+
+      const createdMany = await Fee.insertMany(docs)
+
+      return NextResponse.json(
+        {
+          message: "Fees assigned to class students successfully",
+          createdCount: createdMany.length,
+        },
+        { status: 201 }
+      )
+    }
+
     if (!studentId || !studentEmail || !type || !amount || !dueDate) {
       return NextResponse.json({ message: "Missing required fee fields" }, { status: 400 })
     }
 
-    const created = await Fee.create(body)
+    const created = await Fee.create({
+      studentId,
+      studentEmail,
+      type,
+      amount,
+      dueDate,
+      status: body.status || "pending",
+      paidDate: body.paidDate,
+      transactionId: body.transactionId,
+    })
     return NextResponse.json(created, { status: 201 })
   } catch (error) {
     console.error("Error creating fee:", error)

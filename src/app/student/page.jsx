@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import StatCard from "@/components/support/StatCard/StatCard"
-import { Calendar, FileText, TrendingUp, BookOpen, DollarSign, BookOpenCheck } from "lucide-react"
+import { Calendar, FileText, TrendingUp, BookOpen, DollarSign, BookOpenCheck, Clock } from "lucide-react"
 import { useAuth } from "@/app/providers/AuthProvider"
 import { useApiClient } from "@/components/providers/ApiClientProvider"
 
@@ -15,6 +15,10 @@ export default function StudentOverview() {
   const [results, setResults] = useState([])
   const [feeSummary] = useState({ total: 6000, paid: 5200, pending: 800 })
   const [issuedBooks, setIssuedBooks] = useState([])
+  const [libraryStats, setLibraryStats] = useState({ totalIssued: 0, active: 0, returned: 0 })
+  const [assignmentFeedback, setAssignmentFeedback] = useState({ score: 0, totalAssigned: 0, completed: 0 })
+  const [classRoster, setClassRoster] = useState([])
+  const [holidays, setHolidays] = useState([])
 
   useEffect(() => {
     if (!user || user.role !== "student") {
@@ -31,10 +35,12 @@ export default function StudentOverview() {
         if (!me) return
         setStudent(me)
 
-        const [attendanceRes, resultsRes, booksRes] = await Promise.all([
+        const [attendanceRes, resultsRes, booksRes, rosterRes, holidaysRes] = await Promise.all([
           apiClient.get(`/api/attendance?studentId=${me._id}`),
           apiClient.get(`/api/results?studentId=${me._id}`),
-          apiClient.get(`/api/library/books`)
+          apiClient.get(`/api/library/books`),
+          apiClient.get(`/api/roster?class=${encodeURIComponent(me.class || "")}`),
+          apiClient.get("/api/holidays")
         ])
 
         setAttendanceData(attendanceRes.data || [])
@@ -43,6 +49,41 @@ export default function StudentOverview() {
         const allBooks = booksRes.data || []
         const myBooks = allBooks.filter(b => String(b.issuedTo) === String(me._id))
         setIssuedBooks(myBooks)
+
+        setClassRoster(rosterRes.data || [])
+        setHolidays(holidaysRes.data || [])
+
+        const [issuancesRes, assignmentsRes] = await Promise.all([
+          apiClient.get(`/api/library/issuances?studentId=${me._id}`),
+          apiClient.get(`/api/assignments?studentId=${me._id}`)
+        ])
+
+        const issuances = issuancesRes.data || []
+        const totalIssued = issuances.length
+        const active = issuances.filter(i => i.status === "issued").length
+        const returned = totalIssued - active
+        setLibraryStats({ totalIssued, active, returned })
+
+        const assignments = assignmentsRes.data || []
+        let completed = 0
+        if (assignments.length) {
+          const submissionsPerAssignment = await Promise.all(
+            assignments.map(a =>
+              apiClient
+                .get(`/api/assignments/${a._id}/submissions?studentId=${me._id}`)
+                .then(res => res.data || [])
+                .catch(() => [])
+            )
+          )
+          submissionsPerAssignment.forEach(list => {
+            if (Array.isArray(list) && list.length > 0) {
+              completed += 1
+            }
+          })
+        }
+        const totalAssigned = assignments.length
+        const score = totalAssigned ? Math.round((completed / totalAssigned) * 100) : 0
+        setAssignmentFeedback({ score, totalAssigned, completed })
       } catch (error) {
         console.error("Error loading student dashboard data:", error)
       }
@@ -82,22 +123,223 @@ export default function StudentOverview() {
     { icon: BookOpenCheck, label: "Books Issued", value: issuedBooks.length, color: "purple" }
   ]
 
+  const todayClasses = useMemo(() => {
+    if (!classRoster.length) return []
+    const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+    const todayName = dayNames[new Date().getDay()]
+    return classRoster
+      .filter((entry) => entry.dayOfWeek === todayName)
+      .sort((a, b) => (a.startTime || "").localeCompare(b.startTime || ""))
+  }, [classRoster])
+
+  const upcomingHolidays = useMemo(() => {
+    if (!holidays.length) return []
+    const now = new Date()
+    now.setHours(0, 0, 0, 0)
+    return holidays
+      .filter((h) => h.date && new Date(h.date).getTime() >= now.getTime())
+      .slice(0, 5)
+  }, [holidays])
+
+  const handlePrintProfile = () => {
+    if (!student) return
+    const w = window.open("", "_blank", "width=900,height=700")
+    if (!w) return
+    const s = student
+    const rows = [
+      ["Student Name", s.name],
+      ["Class", s.class],
+      ["Email", s.email],
+      ["Phone", s.phone],
+      ["Address", s.address],
+      ["Date of Birth", s.dateOfBirth],
+      ["Gender", s.gender],
+      ["Parent/Guardian Name", s.parentName],
+      ["Parent Phone", s.parentPhone],
+      ["Parent Email", s.parentEmail],
+      ["Previous School", s.previousSchool || ""],
+      ["Admission Date", s.admissionDate]
+    ]
+    const tableRows = rows
+      .map(
+        ([label, value]) =>
+          `<tr><td class="label">${label}</td><td class="value">${value || "-"}</td></tr>`
+      )
+      .join("")
+    w.document.write(
+      `<html><head><title>ABC School - Student Profile</title><style>
+      body{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;padding:32px;background:#f3f4f6;color:#111827}
+      .card{max-width:900px;margin:0 auto;background:#ffffff;border-radius:16px;border:1px solid #e5e7eb;box-shadow:0 10px 30px rgba(15,23,42,0.08);padding:28px 32px;}
+      .header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;}
+      .school{font-size:22px;font-weight:700;color:#111827;}
+      .subtitle{font-size:13px;color:#6b7280;margin-top:4px;}
+      .meta{margin-top:4px;font-size:12px;color:#6b7280;}
+      table{width:100%;border-collapse:collapse;margin-top:16px;font-size:13px;}
+      .label{width:32%;padding:8px 10px;border-bottom:1px solid #e5e7eb;color:#6b7280;}
+      .value{padding:8px 10px;border-bottom:1px solid #e5e7eb;color:#111827;font-weight:500;}
+      </style></head><body onload="window.print()">
+      <div class="card">
+        <div class="header">
+          <div>
+            <div class="school">ABC School</div>
+            <div class="subtitle">Student Registration Profile</div>
+          </div>
+          <div class="meta">
+            <div>Generated: ${new Date().toLocaleDateString()}</div>
+          </div>
+        </div>
+        <table>${tableRows}</table>
+      </div>
+      </body></html>`
+    )
+    w.document.close()
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-800">Student Dashboard</h1>
+          <h1 className="text-3xl font-bold text-gray-800">ABC School • Student Dashboard</h1>
           <p className="text-sm text-gray-500 mt-1">
             Welcome back{student ? `, ${student.name}` : ""}. Here is your academic snapshot.
           </p>
         </div>
       </div>
 
+      {student && (
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col md:flex-row md:items-start md:justify-between gap-6">
+          <div className="flex-1">
+            <h2 className="text-lg font-semibold text-gray-800">Student Details</h2>
+            <p className="text-xs text-gray-500 mt-1">Registered profile at ABC School</p>
+            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3 text-xs md:text-sm text-gray-700">
+              <div>
+                <span className="block text-gray-500 text-[11px] uppercase tracking-wide">Name</span>
+                <span className="font-semibold">{student.name}</span>
+              </div>
+              <div>
+                <span className="block text-gray-500 text-[11px] uppercase tracking-wide">Class</span>
+                <span className="font-semibold">{student.class}</span>
+              </div>
+              <div>
+                <span className="block text-gray-500 text-[11px] uppercase tracking-wide">Email</span>
+                <span>{student.email}</span>
+              </div>
+              <div>
+                <span className="block text-gray-500 text-[11px] uppercase tracking-wide">Phone</span>
+                <span>{student.phone}</span>
+              </div>
+              <div>
+                <span className="block text-gray-500 text-[11px] uppercase tracking-wide">Address</span>
+                <span>{student.address}</span>
+              </div>
+              <div>
+                <span className="block text-gray-500 text-[11px] uppercase tracking-wide">Date of Birth</span>
+                <span>{student.dateOfBirth}</span>
+              </div>
+              <div>
+                <span className="block text-gray-500 text-[11px] uppercase tracking-wide">Gender</span>
+                <span>{student.gender}</span>
+              </div>
+              <div>
+                <span className="block text-gray-500 text-[11px] uppercase tracking-wide">Admission Date</span>
+                <span>{student.admissionDate}</span>
+              </div>
+              <div>
+                <span className="block text-gray-500 text-[11px] uppercase tracking-wide">Parent/Guardian</span>
+                <span>{student.parentName}</span>
+              </div>
+              <div>
+                <span className="block text-gray-500 text-[11px] uppercase tracking-wide">Parent Phone</span>
+                <span>{student.parentPhone}</span>
+              </div>
+              <div>
+                <span className="block text-gray-500 text-[11px] uppercase tracking-wide">Parent Email</span>
+                <span>{student.parentEmail}</span>
+              </div>
+              <div>
+                <span className="block text-gray-500 text-[11px] uppercase tracking-wide">Previous School</span>
+                <span>{student.previousSchool || "-"}</span>
+              </div>
+            </div>
+          </div>
+          <div className="flex md:flex-col gap-3">
+            <button
+              onClick={handlePrintProfile}
+              className="inline-flex items-center justify-center px-4 py-2 rounded-lg border border-gray-300 text-sm text-gray-700 hover:bg-gray-50 transition"
+            >
+              <FileText className="w-4 h-4 mr-2" />
+              Print Details
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {stats.map((stat, idx) => (
           <StatCard key={idx} {...stat} />
         ))}
       </div>
+
+      {upcomingHolidays.length > 0 && (
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+              <Calendar className="w-5 h-5 text-blue-600" />
+              Upcoming Holidays
+            </h2>
+          </div>
+          <div className="space-y-3">
+            {upcomingHolidays.map((holiday) => (
+              <div
+                key={holiday._id}
+                className="flex items-center justify-between p-3 rounded-lg border border-gray-100 hover:bg-gray-50 transition"
+              >
+                <div>
+                  <p className="text-sm font-semibold text-gray-800">{holiday.name}</p>
+                  <p className="text-xs text-gray-500">
+                    {holiday.date ? new Date(holiday.date).toLocaleDateString() : ""}
+                    {holiday.description ? ` • ${holiday.description}` : ""}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {todayClasses.length > 0 && (
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+              <Clock className="w-5 h-5 text-blue-600" />
+              Today&apos;s Class Roster
+            </h2>
+          </div>
+          <div className="space-y-3">
+            {todayClasses.map((entry) => {
+              const teacher = entry.teacherId && typeof entry.teacherId === "object" ? entry.teacherId : null
+              return (
+                <div
+                  key={entry._id}
+                  className="flex items-center justify-between p-3 rounded-lg border border-gray-100 hover:bg-gray-50 transition"
+                >
+                  <div>
+                    <p className="text-sm font-semibold text-gray-800">{entry.subject || "Class"}</p>
+                    {teacher && (
+                      <p className="text-xs text-gray-500">
+                        {teacher.name} {teacher.subject ? `(${teacher.subject})` : ""}
+                      </p>
+                    )}
+                  </div>
+                  <div className="text-xs font-medium text-gray-700">
+                    {entry.startTime} – {entry.endTime}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 lg:col-span-2">
@@ -153,7 +395,7 @@ export default function StudentOverview() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
           <h2 className="text-lg font-semibold text-gray-800 mb-4">Marks by Subject</h2>
           {marksStats.grades.length === 0 ? (
@@ -177,7 +419,51 @@ export default function StudentOverview() {
         </div>
 
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-          <h2 className="text-lg font-semibold text-gray-800 mb-4">My Issued Books</h2>
+          <h2 className="text-lg font-semibold text-gray-800 mb-2">Teacher Feedback</h2>
+          {assignmentFeedback.totalAssigned === 0 ? (
+            <p className="text-sm text-gray-500">No assignments assigned yet.</p>
+          ) : (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between text-sm text-gray-700">
+                <span>Assignments completed</span>
+                <span className="font-semibold">
+                  {assignmentFeedback.completed}/{assignmentFeedback.totalAssigned}
+                </span>
+              </div>
+              <div className="h-3 rounded-full bg-gray-100 overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-emerald-500 transition-all"
+                  style={{ width: `${assignmentFeedback.score}%` }}
+                />
+              </div>
+              <p className="text-xs text-gray-500">
+                Completion rate based on assignments given by your teachers.
+              </p>
+            </div>
+          )}
+        </div>
+
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+          <h2 className="text-lg font-semibold text-gray-800 mb-2">Library Activity</h2>
+          {libraryStats.totalIssued === 0 ? (
+            <p className="text-sm text-gray-500 mb-3">No books issued yet.</p>
+          ) : (
+            <div className="mb-4 space-y-2 text-sm text-gray-700">
+              <div className="flex items-center justify-between">
+                <span>Total issued</span>
+                <span className="font-semibold">{libraryStats.totalIssued}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span>Active</span>
+                <span className="font-semibold">{libraryStats.active}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span>Returned</span>
+                <span className="font-semibold">{libraryStats.returned}</span>
+              </div>
+            </div>
+          )}
+          <h3 className="text-sm font-semibold text-gray-800 mb-2">My Issued Books</h3>
           {issuedBooks.length === 0 ? (
             <p className="text-sm text-gray-500">No active book issuances.</p>
           ) : (
@@ -192,9 +478,7 @@ export default function StudentOverview() {
                     <p className="text-xs text-gray-500">by {book.author}</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-[11px] text-gray-500">
-                      Due: {book.dueDate || "N/A"}
-                    </p>
+                    <p className="text-[11px] text-gray-500">Due: {book.dueDate || "N/A"}</p>
                     <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 text-[11px] mt-1">
                       Issued
                     </span>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { motion } from 'framer-motion'
 import { UserPlus, Edit, Trash2 } from 'lucide-react'
 import { useApiClient } from '@/components/providers/ApiClientProvider'
@@ -12,6 +12,7 @@ const RegisterTeacher = () => {
   const [isEditing, setIsEditing] = useState(false)
   const [editId, setEditId] = useState(null)
   const [status, setStatus] = useState({ type: '', message: '' })
+  const [searchTerm, setSearchTerm] = useState('')
 
   const initialFormState = {
     name: '',
@@ -144,7 +145,22 @@ const RegisterTeacher = () => {
     }
   }
 
-  
+  const filteredTeachers = useMemo(() => {
+    if (!searchTerm.trim()) return teachersList
+    const q = searchTerm.trim().toLowerCase()
+    return teachersList.filter(t => {
+      const name = (t.name || '').toLowerCase()
+      const email = (t.email || '').toLowerCase()
+      const subject = (t.subject || '').toLowerCase()
+      const classesText = Array.isArray(t.assignedClasses) ? t.assignedClasses.join(', ').toLowerCase() : ''
+      return (
+        name.includes(q) ||
+        email.includes(q) ||
+        subject.includes(q) ||
+        classesText.includes(q)
+      )
+    })
+  }, [teachersList, searchTerm])
 
   return (
     <div>
@@ -276,7 +292,18 @@ const RegisterTeacher = () => {
 
       {/* List of Registered Teachers */}
       <div className="bg-white rounded-xl shadow-md p-6">
-        <h2 className="text-2xl font-bold text-gray-800 mb-4">Registered Teachers</h2>
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
+          <h2 className="text-2xl font-bold text-gray-800">Registered Teachers</h2>
+          <div>
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search by name, subject, email or class"
+              className="w-full md:w-64 px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+        </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
@@ -289,12 +316,12 @@ const RegisterTeacher = () => {
               </tr>
             </thead>
             <tbody>
-              {teachersList.length === 0 ? (
+              {filteredTeachers.length === 0 ? (
                 <tr>
                   <td colSpan="5" className="p-4 text-center text-gray-500">No teachers found.</td>
                 </tr>
               ) : (
-                teachersList.map(teacher => (
+                filteredTeachers.map(teacher => (
                   <tr key={teacher._id} className="border-b hover:bg-gray-50">
                     <td className="p-3">{teacher.name}</td>
                     <td className="p-3">{teacher.subject}</td>

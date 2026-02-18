@@ -10,7 +10,12 @@ const IssueBooks = () => {
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedStudent, setSelectedStudent] = useState(null)
   const [selectedBook, setSelectedBook] = useState(null)
-  const [dueDate, setDueDate] = useState('')
+  const computeDefaultDueDate = () => {
+    const base = new Date()
+    base.setDate(base.getDate() + 10)
+    return base.toISOString().split('T')[0]
+  }
+  const [dueDate, setDueDate] = useState(computeDefaultDueDate)
   const [issued, setIssued] = useState(false)
 
   const [studentsList, setStudentsList] = useState([])
@@ -63,7 +68,7 @@ const IssueBooks = () => {
           setIssued(false)
           setSelectedStudent(null)
           setSelectedBook(null)
-          setDueDate('')
+          setDueDate(computeDefaultDueDate())
           setSearchTerm('')
         }, 3000)
       } catch (error) {
@@ -130,7 +135,7 @@ const IssueBooks = () => {
                   <p className="text-sm text-gray-600">by {selectedBook.author}</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Due Date *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Due Date (defaults to 10 days from today)</label>
                   <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} min={new Date().toISOString().split('T')[0]} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
                 </div>
                 <button onClick={handleIssue} disabled={!dueDate} className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-2">

@@ -40,8 +40,15 @@ export async function POST(request) {
 
     const body = await request.json()
     const { bookId, studentId, dueDate } = body
-    if (!bookId || !studentId || !dueDate) {
-      return NextResponse.json({ message: "bookId, studentId and dueDate are required" }, { status: 400 })
+    if (!bookId || !studentId) {
+      return NextResponse.json({ message: "bookId and studentId are required" }, { status: 400 })
+    }
+
+    let finalDueDate = dueDate
+    if (!finalDueDate) {
+      const base = new Date()
+      base.setDate(base.getDate() + 10)
+      finalDueDate = base.toISOString().split("T")[0]
     }
 
     await connectDB()
@@ -53,14 +60,13 @@ export async function POST(request) {
 
     book.status = "issued"
     book.issuedTo = studentId
-    book.dueDate = dueDate
+    book.dueDate = finalDueDate
     await book.save()
 
-    const issuance = await BookIssuance.create({ bookId, studentId, dueDate, status: "issued" })
+    const issuance = await BookIssuance.create({ bookId, studentId, dueDate: finalDueDate, status: "issued" })
     return NextResponse.json(issuance, { status: 201 })
   } catch (error) {
     console.error("Error issuing book:", error)
     return NextResponse.json({ message: "Internal server error" }, { status: 500 })
   }
 }
-

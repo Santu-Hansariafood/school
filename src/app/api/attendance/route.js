@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { connectDB } from "@/lib/mongodb"
 import Attendance from "@/models/Attendance"
 import Student from "@/models/Student"
+import Holiday from "@/models/Holiday"
 import nodemailer from "nodemailer"
 import { attendanceAbsentEmailTemplate } from "@/lib/emailTemplates"
 
@@ -147,6 +148,14 @@ export async function POST(request) {
       const baseDate = new Date(date)
       baseDate.setHours(0, 0, 0, 0)
 
+      const holiday = await Holiday.findOne({ date: baseDate }).lean()
+      if (holiday) {
+        return NextResponse.json(
+          { message: "Attendance cannot be marked on a holiday" },
+          { status: 400 }
+        )
+      }
+
       const operations = records.map((record) => ({
         updateOne: {
           filter: { studentId: record.studentId, date: baseDate },
@@ -186,6 +195,14 @@ export async function POST(request) {
     // Single record fallback
     const normalizedDate = new Date(body.date)
     normalizedDate.setHours(0, 0, 0, 0)
+
+    const holiday = await Holiday.findOne({ date: normalizedDate }).lean()
+    if (holiday) {
+      return NextResponse.json(
+        { message: "Attendance cannot be marked on a holiday" },
+        { status: 400 }
+      )
+    }
 
     const saved = await Attendance.findOneAndUpdate(
       { studentId: body.studentId, date: normalizedDate },

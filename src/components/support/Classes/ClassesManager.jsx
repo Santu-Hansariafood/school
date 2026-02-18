@@ -1,5 +1,5 @@
 "use client"
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Plus, X } from 'lucide-react'
 import RegisterStudent from '@/components/support/Admin/RegisterStudent'
 import { useApiClient } from '@/components/providers/ApiClientProvider'
@@ -11,7 +11,8 @@ export default function ClassesManager() {
   const [classes, setClasses] = useState([])
   const [newClass, setNewClass] = useState('')
   const [showAddClass, setShowAddClass] = useState(false)
-  const [activeTab, setActiveTab] = useState('register') // 'register' or 'classes'
+  const [activeTab, setActiveTab] = useState('register')
+  const [searchTerm, setSearchTerm] = useState('')
 
   const handleAddClass = (e) => {
     e.preventDefault()
@@ -41,7 +42,13 @@ export default function ClassesManager() {
       .catch(() => {
         showToast({ type: 'error', message: 'Failed to load classes' })
       })
-  }, [apiClient])
+  }, [apiClient, showToast])
+
+  const filteredClasses = useMemo(() => {
+    if (!searchTerm.trim()) return classes
+    const q = searchTerm.trim().toLowerCase()
+    return classes.filter(cls => cls.toLowerCase().includes(q))
+  }, [classes, searchTerm])
 
   return (
     <div className="space-y-6">
@@ -99,12 +106,29 @@ export default function ClassesManager() {
           {activeTab === 'register' ? (
             <RegisterStudent availableClasses={classes} />
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {classes.map((cls) => (
-                <div key={cls} className="p-4 bg-gray-50 rounded-lg border border-gray-100 text-center font-semibold text-gray-700 hover:bg-white hover:shadow-md transition">
-                  {cls}
-                </div>
-              ))}
+            <div className="space-y-4">
+              <div className="flex justify-end">
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Search classes"
+                  className="w-full md:w-64 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {filteredClasses.length === 0 ? (
+                  <div className="col-span-4 text-center text-sm text-gray-500">
+                    No classes found.
+                  </div>
+                ) : (
+                  filteredClasses.map((cls) => (
+                    <div key={cls} className="p-4 bg-gray-50 rounded-lg border border-gray-100 text-center font-semibold text-gray-700 hover:bg-white hover:shadow-md transition">
+                      {cls}
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
           )}
         </div>

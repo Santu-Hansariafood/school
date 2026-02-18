@@ -14,11 +14,20 @@ export async function GET(request) {
 
     const { searchParams } = new URL(request.url)
     const email = searchParams.get("email")
+    const q = searchParams.get("q")
     const pageParam = searchParams.get("page")
     const limitParam = searchParams.get("limit")
 
     const query = {}
     if (email) query.email = email
+    if (q) {
+      const regex = new RegExp(q, "i")
+      query.$or = [
+        { name: regex },
+        { email: regex },
+        { subject: regex },
+      ]
+    }
 
     const page = pageParam ? parseInt(pageParam, 10) : null
     const limit = limitParam ? parseInt(limitParam, 10) : null

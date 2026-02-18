@@ -17,6 +17,7 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url)
     const classFilter = searchParams.get("class")
     const email = searchParams.get("email")
+    const q = searchParams.get("q")
     const pageParam = searchParams.get("page")
     const limitParam = searchParams.get("limit")
 
@@ -26,6 +27,16 @@ export async function GET(request) {
     }
     if (email) {
       query.email = email
+    }
+    if (q) {
+      const regex = new RegExp(q, "i")
+      query.$or = [
+        { name: regex },
+        { email: regex },
+        { class: regex },
+        { parentName: regex },
+        { parentEmail: regex },
+      ]
     }
 
     const page = pageParam ? parseInt(pageParam, 10) : null

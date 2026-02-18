@@ -31,6 +31,7 @@ const RegisterStudent = ({ availableClasses }) => {
   const [formData, setFormData] = useState(initialFormState)
   const [status, setStatus] = useState({ type: '', message: '' })
   const [selectedFilterClass, setSelectedFilterClass] = useState('all')
+  const [searchTerm, setSearchTerm] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
   const pageSize = 20
 
@@ -141,11 +142,27 @@ const RegisterStudent = ({ availableClasses }) => {
   )
 
   const filteredStudents = useMemo(
-    () =>
-      selectedFilterClass === 'all'
-        ? studentsList
-        : studentsList.filter(s => s.class === selectedFilterClass),
-    [studentsList, selectedFilterClass]
+    () => {
+      const base =
+        selectedFilterClass === 'all'
+          ? studentsList
+          : studentsList.filter(s => s.class === selectedFilterClass)
+      if (!searchTerm.trim()) return base
+      const q = searchTerm.trim().toLowerCase()
+      return base.filter(s => {
+        const name = (s.name || '').toLowerCase()
+        const email = (s.email || '').toLowerCase()
+        const parentName = (s.parentName || '').toLowerCase()
+        const parentEmail = (s.parentEmail || '').toLowerCase()
+        return (
+          name.includes(q) ||
+          email.includes(q) ||
+          parentName.includes(q) ||
+          parentEmail.includes(q)
+        )
+      })
+    },
+    [studentsList, selectedFilterClass, searchTerm]
   )
 
   const pagedStudents = useMemo(() => {
@@ -275,19 +292,33 @@ const RegisterStudent = ({ availableClasses }) => {
       <div className="bg-white rounded-xl shadow-md p-6">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
           <h2 className="text-2xl font-bold text-gray-800">Registered Students</h2>
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-600">Filter by Class</span>
-            <select
-              value={selectedFilterClass}
-              onChange={(e) => handleFilterChange(e.target.value)}
-              className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              {filterOptions.map(cls => (
-                <option key={cls} value={cls}>
-                  {cls === 'all' ? 'All Classes' : cls}
-                </option>
-              ))}
-            </select>
+          <div className="flex flex-col md:flex-row gap-3 md:items-center">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-600">Filter by Class</span>
+              <select
+                value={selectedFilterClass}
+                onChange={(e) => handleFilterChange(e.target.value)}
+                className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                {filterOptions.map(cls => (
+                  <option key={cls} value={cls}>
+                    {cls === 'all' ? 'All Classes' : cls}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value)
+                  setCurrentPage(1)
+                }}
+                placeholder="Search by name, email or parent"
+                className="w-full md:w-64 px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
           </div>
         </div>
         <div className="overflow-x-auto">
