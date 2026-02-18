@@ -196,68 +196,70 @@ export default function StudentOverview() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-800">ABC School • Student Dashboard</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Welcome back{student ? `, ${student.name}` : ""}. Here is your academic snapshot.
-          </p>
+    <div className="space-y-6 max-w-6xl mx-auto">
+      <div className="bg-gradient-to-r from-indigo-500 via-sky-500 to-emerald-500 rounded-2xl p-[1px] shadow-lg">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-white/95 rounded-2xl px-6 py-5">
+          <div>
+            <h1 className="text-3xl font-bold text-slate-900">ABC School • Student Dashboard</h1>
+            <p className="text-sm text-slate-600 mt-1">
+              Welcome back{student ? `, ${student.name}` : ""}. Here is your academic snapshot.
+            </p>
+          </div>
         </div>
       </div>
 
       {student && (
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col md:flex-row md:items-start md:justify-between gap-6">
+        <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-md border border-indigo-50 p-6 flex flex-col md:flex-row md:items-start md:justify-between gap-6">
           <div className="flex-1">
-            <h2 className="text-lg font-semibold text-gray-800">Student Details</h2>
-            <p className="text-xs text-gray-500 mt-1">Registered profile at ABC School</p>
-            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3 text-xs md:text-sm text-gray-700">
+            <h2 className="text-lg font-semibold text-slate-900">Student Details</h2>
+            <p className="text-xs text-slate-500 mt-1">Registered profile at ABC School</p>
+            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3 text-xs md:text-sm text-slate-800">
               <div>
-                <span className="block text-gray-500 text-[11px] uppercase tracking-wide">Name</span>
+                <span className="block text-slate-500 text-[11px] uppercase tracking-wide">Name</span>
                 <span className="font-semibold">{student.name}</span>
               </div>
               <div>
-                <span className="block text-gray-500 text-[11px] uppercase tracking-wide">Class</span>
+                <span className="block text-slate-500 text-[11px] uppercase tracking-wide">Class</span>
                 <span className="font-semibold">{student.class}</span>
               </div>
               <div>
-                <span className="block text-gray-500 text-[11px] uppercase tracking-wide">Email</span>
+                <span className="block text-slate-500 text-[11px] uppercase tracking-wide">Email</span>
                 <span>{student.email}</span>
               </div>
               <div>
-                <span className="block text-gray-500 text-[11px] uppercase tracking-wide">Phone</span>
+                <span className="block text-slate-500 text-[11px] uppercase tracking-wide">Phone</span>
                 <span>{student.phone}</span>
               </div>
               <div>
-                <span className="block text-gray-500 text-[11px] uppercase tracking-wide">Address</span>
+                <span className="block text-slate-500 text-[11px] uppercase tracking-wide">Address</span>
                 <span>{student.address}</span>
               </div>
               <div>
-                <span className="block text-gray-500 text-[11px] uppercase tracking-wide">Date of Birth</span>
+                <span className="block text-slate-500 text-[11px] uppercase tracking-wide">Date of Birth</span>
                 <span>{student.dateOfBirth}</span>
               </div>
               <div>
-                <span className="block text-gray-500 text-[11px] uppercase tracking-wide">Gender</span>
+                <span className="block text-slate-500 text-[11px] uppercase tracking-wide">Gender</span>
                 <span>{student.gender}</span>
               </div>
               <div>
-                <span className="block text-gray-500 text-[11px] uppercase tracking-wide">Admission Date</span>
+                <span className="block text-slate-500 text-[11px] uppercase tracking-wide">Admission Date</span>
                 <span>{student.admissionDate}</span>
               </div>
               <div>
-                <span className="block text-gray-500 text-[11px] uppercase tracking-wide">Parent/Guardian</span>
+                <span className="block text-slate-500 text-[11px] uppercase tracking-wide">Parent/Guardian</span>
                 <span>{student.parentName}</span>
               </div>
               <div>
-                <span className="block text-gray-500 text-[11px] uppercase tracking-wide">Parent Phone</span>
+                <span className="block text-slate-500 text-[11px] uppercase tracking-wide">Parent Phone</span>
                 <span>{student.parentPhone}</span>
               </div>
               <div>
-                <span className="block text-gray-500 text-[11px] uppercase tracking-wide">Parent Email</span>
+                <span className="block text-slate-500 text-[11px] uppercase tracking-wide">Parent Email</span>
                 <span>{student.parentEmail}</span>
               </div>
               <div>
-                <span className="block text-gray-500 text-[11px] uppercase tracking-wide">Previous School</span>
+                <span className="block text-slate-500 text-[11px] uppercase tracking-wide">Previous School</span>
                 <span>{student.previousSchool || "-"}</span>
               </div>
             </div>
@@ -265,7 +267,7 @@ export default function StudentOverview() {
           <div className="flex md:flex-col gap-3">
             <button
               onClick={handlePrintProfile}
-              className="inline-flex items-center justify-center px-4 py-2 rounded-lg border border-gray-300 text-sm text-gray-700 hover:bg-gray-50 transition"
+              className="inline-flex items-center justify-center px-4 py-2 rounded-lg border border-indigo-200 text-sm text-indigo-700 bg-indigo-50 hover:bg-indigo-100 transition"
             >
               <FileText className="w-4 h-4 mr-2" />
               Print Details
@@ -281,9 +283,9 @@ export default function StudentOverview() {
       </div>
 
       {upcomingHolidays.length > 0 && (
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+        <div className="bg-white/95 rounded-2xl shadow-sm border border-blue-50 p-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+            <h2 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
               <Calendar className="w-5 h-5 text-blue-600" />
               Upcoming Holidays
             </h2>
@@ -308,9 +310,9 @@ export default function StudentOverview() {
       )}
 
       {todayClasses.length > 0 && (
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+        <div className="bg-white/95 rounded-2xl shadow-sm border border-emerald-50 p-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+            <h2 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
               <Clock className="w-5 h-5 text-blue-600" />
               Today&apos;s Class Roster
             </h2>
@@ -342,15 +344,15 @@ export default function StudentOverview() {
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 lg:col-span-2">
+        <div className="bg-white/95 rounded-2xl shadow-sm border border-indigo-50 p-6 lg:col-span-2">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-800">Attendance Trend (Last 7 Days)</h2>
-            <span className="text-xs text-gray-500">
+            <h2 className="text-lg font-semibold text-slate-900">Attendance Trend (Last 7 Days)</h2>
+            <span className="text-xs text-slate-500">
               Present {attendanceStats.present}/{attendanceStats.total} days
             </span>
           </div>
           {attendanceStats.series.length === 0 ? (
-            <p className="text-sm text-gray-500">No attendance records available yet.</p>
+            <p className="text-sm text-slate-500">No attendance records available yet.</p>
           ) : (
             <div className="flex items-end gap-3 h-40">
               {attendanceStats.series.map(([day, status]) => {
@@ -373,9 +375,9 @@ export default function StudentOverview() {
           )}
         </div>
 
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-          <h2 className="text-lg font-semibold text-gray-800 mb-4">Fee Summary</h2>
-          <div className="space-y-3 text-sm text-gray-700">
+        <div className="bg-white/95 rounded-2xl shadow-sm border border-amber-50 p-6">
+          <h2 className="text-lg font-semibold text-slate-900 mb-4">Fee Summary</h2>
+          <div className="space-y-3 text-sm text-slate-800">
             <div className="flex items-center justify-between">
               <span>Total Fees</span>
               <span className="font-semibold">₹{feeSummary.total}</span>
@@ -389,66 +391,66 @@ export default function StudentOverview() {
               <span className="font-semibold text-orange-600">₹{feeSummary.pending}</span>
             </div>
           </div>
-          <p className="mt-4 text-xs text-gray-500">
+          <p className="mt-4 text-xs text-slate-500">
             For detailed payments and receipts, open the Fees section from the sidebar.
           </p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-          <h2 className="text-lg font-semibold text-gray-800 mb-4">Marks by Subject</h2>
+        <div className="bg-white/95 rounded-2xl shadow-sm border border-purple-50 p-6">
+          <h2 className="text-lg font-semibold text-slate-900 mb-4">Marks by Subject</h2>
           {marksStats.grades.length === 0 ? (
-            <p className="text-sm text-gray-500">No marks available yet.</p>
+            <p className="text-sm text-slate-500">No marks available yet.</p>
           ) : (
             <div className="space-y-3">
               {marksStats.grades.map((g) => (
                 <div key={g.subject} className="flex items-center justify-between gap-4">
-                  <span className="text-sm text-gray-700 flex-1">{g.subject}</span>
-                  <div className="flex-1 h-2 rounded-full bg-gray-100 overflow-hidden">
+                  <span className="text-sm text-slate-800 flex-1">{g.subject}</span>
+                  <div className="flex-1 h-2 rounded-full bg-slate-100 overflow-hidden">
                     <div
                       className="h-full rounded-full bg-indigo-500"
                       style={{ width: `${Math.min(g.marks, 100)}%` }}
                     />
                   </div>
-                  <span className="w-12 text-right text-xs text-gray-600">{g.marks}%</span>
+                  <span className="w-12 text-right text-xs text-slate-600">{g.marks}%</span>
                 </div>
               ))}
             </div>
           )}
         </div>
 
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-          <h2 className="text-lg font-semibold text-gray-800 mb-2">Teacher Feedback</h2>
+        <div className="bg-white/95 rounded-2xl shadow-sm border border-emerald-50 p-6">
+          <h2 className="text-lg font-semibold text-slate-900 mb-2">Teacher Feedback</h2>
           {assignmentFeedback.totalAssigned === 0 ? (
-            <p className="text-sm text-gray-500">No assignments assigned yet.</p>
+            <p className="text-sm text-slate-500">No assignments assigned yet.</p>
           ) : (
             <div className="space-y-3">
-              <div className="flex items-center justify-between text-sm text-gray-700">
+              <div className="flex items-center justify-between text-sm text-slate-800">
                 <span>Assignments completed</span>
                 <span className="font-semibold">
                   {assignmentFeedback.completed}/{assignmentFeedback.totalAssigned}
                 </span>
               </div>
-              <div className="h-3 rounded-full bg-gray-100 overflow-hidden">
+              <div className="h-3 rounded-full bg-slate-100 overflow-hidden">
                 <div
                   className="h-full rounded-full bg-emerald-500 transition-all"
                   style={{ width: `${assignmentFeedback.score}%` }}
                 />
               </div>
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-slate-500">
                 Completion rate based on assignments given by your teachers.
               </p>
             </div>
           )}
         </div>
 
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-          <h2 className="text-lg font-semibold text-gray-800 mb-2">Library Activity</h2>
+        <div className="bg-white/95 rounded-2xl shadow-sm border border-sky-50 p-6">
+          <h2 className="text-lg font-semibold text-slate-900 mb-2">Library Activity</h2>
           {libraryStats.totalIssued === 0 ? (
-            <p className="text-sm text-gray-500 mb-3">No books issued yet.</p>
+            <p className="text-sm text-slate-500 mb-3">No books issued yet.</p>
           ) : (
-            <div className="mb-4 space-y-2 text-sm text-gray-700">
+            <div className="mb-4 space-y-2 text-sm text-slate-800">
               <div className="flex items-center justify-between">
                 <span>Total issued</span>
                 <span className="font-semibold">{libraryStats.totalIssued}</span>
@@ -463,9 +465,9 @@ export default function StudentOverview() {
               </div>
             </div>
           )}
-          <h3 className="text-sm font-semibold text-gray-800 mb-2">My Issued Books</h3>
+          <h3 className="text-sm font-semibold text-slate-900 mb-2">My Issued Books</h3>
           {issuedBooks.length === 0 ? (
-            <p className="text-sm text-gray-500">No active book issuances.</p>
+            <p className="text-sm text-slate-500">No active book issuances.</p>
           ) : (
             <div className="space-y-3">
               {issuedBooks.map((book) => (
@@ -474,11 +476,11 @@ export default function StudentOverview() {
                   className="flex items-center justify-between gap-3 p-3 rounded-lg border border-gray-100 hover:bg-gray-50 transition"
                 >
                   <div>
-                    <p className="text-sm font-medium text-gray-800">{book.title}</p>
-                    <p className="text-xs text-gray-500">by {book.author}</p>
+                    <p className="text-sm font-medium text-slate-900">{book.title}</p>
+                    <p className="text-xs text-slate-500">by {book.author}</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-[11px] text-gray-500">Due: {book.dueDate || "N/A"}</p>
+                    <p className="text-[11px] text-slate-500">Due: {book.dueDate || "N/A"}</p>
                     <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 text-[11px] mt-1">
                       Issued
                     </span>
