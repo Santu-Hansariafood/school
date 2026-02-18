@@ -16,6 +16,8 @@ const AdminRoster = () => {
 
   const [selectedClass, setSelectedClass] = useState("")
   const [selectedTeacher, setSelectedTeacher] = useState("")
+  const [month, setMonth] = useState("")
+  const [year, setYear] = useState("")
   const [dayOfWeek, setDayOfWeek] = useState(days[0])
   const [startTime, setStartTime] = useState("")
   const [endTime, setEndTime] = useState("")
@@ -34,11 +36,16 @@ const AdminRoster = () => {
       setTeachers(teachersRes.data || [])
       setEntries(rosterRes.data || [])
       if (!selectedClass && classNames.length) setSelectedClass(classNames[0])
+      if (!month && typeof window !== "undefined") {
+        const now = new Date()
+        setMonth(String(now.getMonth() + 1))
+        setYear(String(now.getFullYear()))
+      }
     } catch (error) {
       console.error("Error loading roster data:", error)
       showToast({ type: "error", message: "Failed to load roster data" })
     }
-  }, [apiClient, selectedClass, showToast])
+  }, [apiClient, selectedClass, month, showToast, year])
 
   useEffect(() => {
     loadInitial()
@@ -59,6 +66,8 @@ const AdminRoster = () => {
         startTime,
         endTime,
         subject,
+        month: month ? parseInt(month, 10) : undefined,
+        year: year ? parseInt(year, 10) : undefined,
       }
       const res = await apiClient.post("/api/roster", payload)
       setEntries((prev) => [res.data, ...prev])
@@ -87,7 +96,19 @@ const AdminRoster = () => {
   }
 
   const filteredEntries = entries
-    .filter((entry) => (!selectedClass || entry.className === selectedClass) && (!selectedTeacher || entry.teacherId?._id === selectedTeacher || entry.teacherId === selectedTeacher))
+    .filter((entry) => {
+      if (selectedClass && entry.className !== selectedClass) return false
+      if (
+        selectedTeacher &&
+        !(entry.teacherId?._id === selectedTeacher || entry.teacherId === selectedTeacher)
+      ) {
+        return false
+      }
+      if (month && year && entry.month && entry.year) {
+        return entry.month === parseInt(month, 10) && entry.year === parseInt(year, 10)
+      }
+      return true
+    })
     .sort((a, b) => {
       const dayIndexA = days.indexOf(a.dayOfWeek)
       const dayIndexB = days.indexOf(b.dayOfWeek)
@@ -104,7 +125,7 @@ const AdminRoster = () => {
           <Calendar className="w-5 h-5 text-blue-600" />
           Create Roster Entry
         </h2>
-        <form onSubmit={handleCreate} className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+        <form onSubmit={handleCreate} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Class</label>
             <select
@@ -183,7 +204,7 @@ const AdminRoster = () => {
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
             />
           </div>
-          <div className="md:col-span-3 flex justify-end">
+          <div className="md:col-span-4 flex justify-end">
             <button
               type="submit"
               disabled={isSaving}
@@ -197,11 +218,47 @@ const AdminRoster = () => {
       </div>
 
       <div className="bg-white rounded-xl shadow-md p-6">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
           <h2 className="text-xl font-semibold text-gray-800 flex items-center gap-2">
             <Users className="w-5 h-5 text-blue-600" />
             Current Roster
           </h2>
+          <div className="flex flex-wrap gap-3 items-center">
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Month</label>
+              <select
+                value={month}
+                onChange={(e) => setMonth(e.target.value)}
+                className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm"
+              >
+                <option value="">All</option>
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((m) => (
+                  <option key={m} value={m}>
+                    {new Date(2000, m - 1, 1).toLocaleString(undefined, { month: "short" })}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Year</label>
+              <select
+                value={year}
+                onChange={(e) => setYear(e.target.value)}
+                className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm"
+              >
+                <option value="">All</option>
+                {Array.from({ length: 5 }).map((_, idx) => {
+                  const baseYear = new Date().getFullYear()
+                  const y = baseYear - 1 + idx
+                  return (
+                    <option key={y} value={y}>
+                      {y}
+                    </option>
+                  )
+                })}
+              </select>
+            </div>
+          </div>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
@@ -263,4 +320,3 @@ const AdminRoster = () => {
 }
 
 export default AdminRoster
-

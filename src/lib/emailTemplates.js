@@ -258,3 +258,107 @@ export function marksheetEmailTemplate({ studentName, className, term, results, 
 </body>
 </html>`
 }
+
+export function feeReceiptEmailTemplate({
+  studentName,
+  className,
+  parentName,
+  feeType,
+  amount,
+  dueDate,
+  status,
+  paymentMode,
+  receiptNumber,
+  paidDate,
+  appName = "School Portal"
+}) {
+  const paidOn = paidDate ? new Date(paidDate).toLocaleString() : ""
+  const modeLabel = paymentMode ? paymentMode.toUpperCase() : "ONLINE"
+  return `<!doctype html>
+<html lang="en">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>${appName} Fee Receipt</title>
+</head>
+<body style="margin:0;padding:0;background:#f3f4f6;">
+  <div style="width:100%;padding:32px 0;background:#f3f4f6;">
+    <div style="max-width:640px;margin:0 auto;background:#ffffff;border:1px solid #e5e7eb;border-radius:16px;overflow:hidden;box-shadow:0 4px 18px rgba(0,0,0,0.06);">
+      <div style="padding:24px 28px;background:linear-gradient(135deg,#16a34a 0%,#15803d 100%);color:#fff;">
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <div style="display:flex;align-items:center;">
+            <div style="width:44px;height:44px;border-radius:14px;background:rgba(255,255,255,0.18);display:flex;align-items:center;justify-content:center;margin-right:14px;">
+              <span style="font-size:24px;font-weight:800;">S</span>
+            </div>
+            <div>
+              <div style="font-size:20px;font-weight:700;letter-spacing:0.2px;">${appName}</div>
+              <div style="font-size:12px;color:rgba(240,253,250,0.85);margin-top:2px;">Official Fee Payment Receipt</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="padding:24px 28px 18px 28px;">
+        <p style="margin:0 0 10px 0;font-size:14px;color:#4b5563;font-family:Inter,Segoe UI,Arial,sans-serif;">
+          Dear Parent/Guardian${parentName ? ` (${parentName})` : ""},
+        </p>
+        <p style="margin:0 0 16px 0;font-size:14px;color:#4b5563;font-family:Inter,Segoe UI,Arial,sans-serif;">
+          This email confirms that the following fee payment has been recorded and approved.
+        </p>
+
+        <div style="margin:16px 0;padding:16px 18px;border-radius:12px;background:#f9fafb;border:1px solid #e5e7eb;">
+          <table style="width:100%;border-collapse:collapse;font-size:13px;color:#111827;">
+            <tbody>
+              <tr>
+                <td style="padding:6px 8px;color:#6b7280;width:38%;">Student Name</td>
+                <td style="padding:6px 8px;font-weight:600;">${studentName}</td>
+              </tr>
+              <tr>
+                <td style="padding:6px 8px;color:#6b7280;">Class</td>
+                <td style="padding:6px 8px;">${className || "-"}</td>
+              </tr>
+              <tr>
+                <td style="padding:6px 8px;color:#6b7280;">Fee Type</td>
+                <td style="padding:6px 8px;">${feeType}</td>
+              </tr>
+              <tr>
+                <td style="padding:6px 8px;color:#6b7280;">Amount</td>
+                <td style="padding:6px 8px;">${amount}</td>
+              </tr>
+              <tr>
+                <td style="padding:6px 8px;color:#6b7280;">Due Date</td>
+                <td style="padding:6px 8px;">${dueDate}</td>
+              </tr>
+              <tr>
+                <td style="padding:6px 8px;color:#6b7280;">Payment Mode</td>
+                <td style="padding:6px 8px;">${modeLabel}</td>
+              </tr>
+              <tr>
+                <td style="padding:6px 8px;color:#6b7280;">Status</td>
+                <td style="padding:6px 8px;">${status}</td>
+              </tr>
+              ${receiptNumber ? `<tr>
+                <td style="padding:6px 8px;color:#6b7280;">Receipt Number</td>
+                <td style="padding:6px 8px;">${receiptNumber}</td>
+              </tr>` : ""}
+              ${paidOn ? `<tr>
+                <td style="padding:6px 8px;color:#6b7280;">Payment Date</td>
+                <td style="padding:6px 8px;">${paidOn}</td>
+              </tr>` : ""}
+            </tbody>
+          </table>
+        </div>
+
+        <p style="margin:0 0 10px 0;font-size:12px;color:#6b7280;font-family:Inter,Segoe UI,Arial,sans-serif;">
+          Please keep this email for your records. If you notice any discrepancy, contact the school administration.
+        </p>
+      </div>
+
+      <div style="padding:18px 28px;border-top:1px solid #f1f5f9;background:#fafafa;">
+        <p style="margin:0;font-size:12px;color:#6b7280;font-family:Inter,Segoe UI,Arial,sans-serif;">© ${new Date().getFullYear()} ${appName}. All rights reserved.</p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>`
+}

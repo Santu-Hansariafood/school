@@ -1,5 +1,5 @@
 "use client"
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import { UserPlus, Edit, Trash2 } from 'lucide-react'
 import { useApiClient } from '@/components/providers/ApiClientProvider'
@@ -25,18 +25,18 @@ const RegisterAdmin = () => {
 
   const [formData, setFormData] = useState(initialFormState)
 
-  const fetchAdmins = async () => {
+  const fetchAdmins = useCallback(async () => {
     try {
       const response = await apiClient.get('/api/admins')
       setAdminsList(response.data)
     } catch (error) {
       console.error('Error fetching admins:', error)
     }
-  }
+  }, [apiClient])
 
   useEffect(() => {
     fetchAdmins()
-  }, [])
+  }, [fetchAdmins])
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value })

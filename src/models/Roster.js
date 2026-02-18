@@ -12,6 +12,8 @@ const RosterSchema = new mongoose.Schema(
     startTime: { type: String, required: true },
     endTime: { type: String, required: true },
     subject: { type: String },
+    month: { type: Number, min: 1, max: 12 },
+    year: { type: Number },
   },
   { timestamps: true }
 )
@@ -19,4 +21,3 @@ const RosterSchema = new mongoose.Schema(
 RosterSchema.index({ teacherId: 1, className: 1, dayOfWeek: 1, startTime: 1 })
 
 export default mongoose.models.Roster || mongoose.model("Roster", RosterSchema)
-

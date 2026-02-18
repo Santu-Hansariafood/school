@@ -10,6 +10,14 @@ const FeeSchema = new mongoose.Schema(
     status: { type: String, enum: ["pending", "paid"], default: "pending" },
     paidDate: { type: String },
     transactionId: { type: String },
+    paymentMode: {
+      type: String,
+      enum: ["cash", "cheque", "online"],
+    },
+    paymentDetails: { type: String },
+    adminApproved: { type: Boolean, default: false },
+    adminApprovedAt: { type: String },
+    receiptNumber: { type: String },
   },
   { timestamps: true }
 )
@@ -17,4 +25,3 @@ const FeeSchema = new mongoose.Schema(
 FeeSchema.index({ studentId: 1, type: 1, dueDate: 1 })
 
 export default mongoose.models.Fee || mongoose.model("Fee", FeeSchema)
-

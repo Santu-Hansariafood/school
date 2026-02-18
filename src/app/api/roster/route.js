@@ -15,11 +15,21 @@ export async function GET(request) {
     const teacherId = searchParams.get("teacherId")
     const className = searchParams.get("class")
     const dayOfWeek = searchParams.get("dayOfWeek")
+    const monthParam = searchParams.get("month")
+    const yearParam = searchParams.get("year")
 
     const query = {}
     if (teacherId) query.teacherId = teacherId
     if (className) query.className = className
     if (dayOfWeek) query.dayOfWeek = dayOfWeek
+    if (monthParam) {
+      const m = parseInt(monthParam, 10)
+      if (!Number.isNaN(m)) query.month = m
+    }
+    if (yearParam) {
+      const y = parseInt(yearParam, 10)
+      if (!Number.isNaN(y)) query.year = y
+    }
 
     await connectDB()
     const entries = await Roster.find(query)
@@ -45,7 +55,7 @@ export async function POST(request) {
 
     await connectDB()
     const body = await request.json()
-    const { teacherId, className, dayOfWeek, startTime, endTime, subject } = body || {}
+    const { teacherId, className, dayOfWeek, startTime, endTime, subject, month, year } = body || {}
 
     if (!teacherId || !className || !dayOfWeek || !startTime || !endTime) {
       return NextResponse.json(
@@ -54,6 +64,19 @@ export async function POST(request) {
       )
     }
 
+    const monthNumber =
+      typeof month === "number"
+        ? month
+        : typeof month === "string" && month.trim()
+        ? parseInt(month, 10)
+        : undefined
+    const yearNumber =
+      typeof year === "number"
+        ? year
+        : typeof year === "string" && year.trim()
+        ? parseInt(year, 10)
+        : undefined
+
     const entry = await Roster.create({
       teacherId,
       className,
@@ -61,6 +84,8 @@ export async function POST(request) {
       startTime,
       endTime,
       subject: subject || "",
+      month: monthNumber,
+      year: yearNumber,
     })
 
     return NextResponse.json(entry, { status: 201 })
@@ -69,4 +94,3 @@ export async function POST(request) {
     return NextResponse.json({ message: "Internal server error" }, { status: 500 })
   }
 }
-

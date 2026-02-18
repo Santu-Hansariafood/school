@@ -2,15 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState, startTransition } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  DollarSign,
-  CheckCircle,
-  Clock,
-  CreditCard,
-  X,
-  Smartphone,
-  Download,
-} from "lucide-react";
+import { DollarSign, CheckCircle, Clock, CreditCard, X, Smartphone, Download } from "lucide-react";
 import jsPDF from "jspdf";
 import { useAuth } from "@/app/providers/AuthProvider";
 import { useToast } from "@/components/common/Toast/ToastProvider";
@@ -28,7 +20,8 @@ const Fees = ({ role }) => {
   const [selectedStudent, setSelectedStudent] = useState("");
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedFee, setSelectedFee] = useState(null);
-  const [paymentMethod, setPaymentMethod] = useState("card");
+  const [paymentMode, setPaymentMode] = useState("online");
+  const [gatewayMethod, setGatewayMethod] = useState("card");
   const [processing, setProcessing] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [transactionDetails, setTransactionDetails] = useState(null);
@@ -46,6 +39,7 @@ const Fees = ({ role }) => {
   });
 
   const [upiId, setUpiId] = useState("");
+  const [chequeNumber, setChequeNumber] = useState("");
 
   const fetchClasses = useCallback(async () => {
     try {
@@ -157,7 +151,7 @@ const Fees = ({ role }) => {
       return;
     }
 
-    if (paymentMethod === "card") {
+    if (paymentMode === "online" && gatewayMethod === "card") {
       if (
         !cardDetails.number ||
         !cardDetails.name ||
@@ -167,9 +161,14 @@ const Fees = ({ role }) => {
         showToast({ type: "warning", message: "Please fill all card details" });
         return;
       }
-    } else if (paymentMethod === "upi") {
+    } else if (paymentMode === "online" && gatewayMethod === "upi") {
       if (!upiId) {
         showToast({ type: "warning", message: "Please enter UPI ID" });
+        return;
+      }
+    } else if (paymentMode === "cheque") {
+      if (!chequeNumber) {
+        showToast({ type: "warning", message: "Please enter cheque number" });
         return;
       }
     }
@@ -181,18 +180,37 @@ const Fees = ({ role }) => {
       id: generateTransactionId(),
       date: new Date().toISOString(),
       amount: selectedFee?.amount || 0,
-      method: paymentMethod,
-      status: "success",
+      method:
+        paymentMode === "online"
+          ? gatewayMethod === "card"
+            ? "online-card"
+            : "online-upi"
+          : paymentMode,
+      status: paymentMode === "online" ? "success" : "pending",
       feeType: selectedFee?.type || "",
     };
 
     try {
       if (selectedFee?._id) {
-        await apiClient.put(`/api/fees/${selectedFee._id}`, {
-          status: "paid",
-          paidDate: new Date().toISOString(),
-          transactionId: transaction.id,
-        });
+        const updatePayload = {};
+        if (paymentMode === "online") {
+          updatePayload.status = "paid";
+          updatePayload.paidDate = new Date().toISOString();
+          updatePayload.transactionId = transaction.id;
+          updatePayload.paymentMode = "online";
+          updatePayload.paymentDetails =
+            gatewayMethod === "card"
+              ? `Card payment`
+              : `UPI: ${upiId}`;
+        } else if (paymentMode === "cash") {
+          updatePayload.paymentMode = "cash";
+          updatePayload.transactionId = transaction.id;
+        } else if (paymentMode === "cheque") {
+          updatePayload.paymentMode = "cheque";
+          updatePayload.transactionId = transaction.id;
+          updatePayload.paymentDetails = `Cheque: ${chequeNumber}`;
+        }
+        await apiClient.put(`/api/fees/${selectedFee._id}`, updatePayload);
       }
       const res = await apiClient.get(
         `/api/fees?studentId=${encodeURIComponent(selectedStudent)}`
@@ -205,7 +223,13 @@ const Fees = ({ role }) => {
 
     setTransactionDetails(transaction);
     setPaymentSuccess(true);
-    showToast({ type: "success", message: "Payment successful" });
+    showToast({
+      type: "success",
+      message:
+        paymentMode === "online"
+          ? "Payment successful"
+          : "Payment preference submitted. Please complete payment at school office.",
+    });
     setProcessing(false);
   };
 
@@ -243,7 +267,7 @@ const Fees = ({ role }) => {
       ["Fee Type:", String(transactionDetails.feeType || "")],
       ["Amount Paid:", `$${Number(transactionDetails.amount || 0)}`],
       ["Payment Method:", String((transactionDetails.method || "").toUpperCase())],
-      ["Status:", "SUCCESS"],
+      ["Status:", transactionDetails.status === "success" ? "SUCCESS" : "PENDING"],
     ];
 
     let y = 60;
@@ -271,9 +295,11 @@ const Fees = ({ role }) => {
   const closeModal = () => {
     setShowPaymentModal(false);
     setSelectedFee(null);
-    setPaymentMethod("card");
+    setPaymentMode("online");
+    setGatewayMethod("card");
     setCardDetails({ number: "", name: "", expiry: "", cvv: "" });
     setUpiId("");
+    setChequeNumber("");
     setPaymentSuccess(false);
     setTransactionDetails(null);
   };
@@ -288,31 +314,31 @@ const Fees = ({ role }) => {
         <h1 className="text-3xl font-bold text-gray-800">Fee Management</h1>
 
         {role !== "student" && (
-          <div className="flex items-center gap-3">
-            <select
-              value={selectedClass}
-              onChange={(e) => setSelectedClass(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg"
-            >
-              {classesList.map((cls) => (
-                <option value={cls} key={cls}>
-                  {cls}
-                </option>
-              ))}
-            </select>
+        <div className="flex items-center gap-3">
+          <select
+            value={selectedClass}
+            onChange={(e) => setSelectedClass(e.target.value)}
+            className="px-4 py-2 border border-gray-300 rounded-lg"
+          >
+            {classesList.map((cls) => (
+              <option value={cls} key={cls}>
+                {cls}
+              </option>
+            ))}
+          </select>
 
-            <select
-              value={selectedStudent}
-              onChange={(e) => setSelectedStudent(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg"
-            >
-              {filteredStudents.map((student) => (
-                <option value={student._id} key={student._id}>
-                  {student.name}
-                </option>
-              ))}
-            </select>
-          </div>
+          <select
+            value={selectedStudent}
+            onChange={(e) => setSelectedStudent(e.target.value)}
+            className="px-4 py-2 border border-gray-300 rounded-lg"
+          >
+            {filteredStudents.map((student) => (
+              <option value={student._id} key={student._id}>
+                {student.name}
+              </option>
+            ))}
+          </select>
+        </div>
         )}
       </div>
 
@@ -466,6 +492,13 @@ const Fees = ({ role }) => {
                 <th className="px-4 py-3 text-center">Amount</th>
                 <th className="px-4 py-3 text-center">Due Date</th>
                 <th className="px-4 py-3 text-center">Status</th>
+                {role !== "student" && (
+                  <>
+                    <th className="px-4 py-3 text-center">Payment Mode</th>
+                    <th className="px-4 py-3 text-center">Approved</th>
+                    <th className="px-4 py-3 text-center">Action</th>
+                  </>
+                )}
                 {role === "student" && (
                   <th className="px-4 py-3 text-center">Action</th>
                 )}
@@ -491,6 +524,60 @@ const Fees = ({ role }) => {
                       {fee.status}
                     </span>
                   </td>
+
+                  {role !== "student" && (
+                    <>
+                      <td className="px-4 py-3 text-center text-xs">
+                        {fee.paymentMode || "—"}
+                      </td>
+                      <td className="px-4 py-3 text-center text-xs">
+                        {fee.adminApproved ? "Yes" : "No"}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        {(!fee.adminApproved || fee.status !== "paid") && (
+                          <button
+                            onClick={async () => {
+                              try {
+                                const res = await apiClient.post(
+                                  `/api/fees/${fee._id}/approve`,
+                                  {
+                                    ensurePaid: fee.status !== "paid",
+                                  }
+                                );
+                                const updated = res.data?.fee || null;
+                                if (updated) {
+                                  setFees((prev) =>
+                                    prev.map((f) =>
+                                      f._id === updated._id ? updated : f
+                                    )
+                                  );
+                                }
+                                showToast({
+                                  type: "success",
+                                  message:
+                                    "Payment approved and receipt processed",
+                                });
+                              } catch (error) {
+                                console.error(
+                                  "Error approving fee payment:",
+                                  error
+                                );
+                                showToast({
+                                  type: "error",
+                                  message: "Failed to approve payment",
+                                });
+                              }
+                            }}
+                            className="px-3 py-1 bg-emerald-600 text-white rounded-lg text-xs"
+                          >
+                            {fee.status === "paid"
+                              ? "Approve & Email"
+                              : "Mark Paid & Email"}
+                          </button>
+                        )}
+                      </td>
+                    </>
+                  )}
 
                   {role === "student" && (
                     <td className="px-4 py-3 text-center">
@@ -553,66 +640,156 @@ const Fees = ({ role }) => {
                     </p>
                   </div>
 
-                  {/* Payment Method */}
+                  {/* Payment Mode */}
                   <p className="text-sm font-semibold mb-2">
-                    Select Payment Method
+                    Select Payment Mode
                   </p>
                   <div className="grid grid-cols-2 gap-3 mb-6">
                     <button
-                      onClick={() => setPaymentMethod("card")}
+                      onClick={() => setPaymentMode("cash")}
                       className={`p-4 border-2 rounded-lg text-center ${
-                        paymentMethod === "card"
+                        paymentMode === "cash"
                           ? "border-blue-500 bg-blue-50"
                           : "border-gray-200"
                       }`}
                     >
                       <CreditCard
                         className={`w-8 h-8 mx-auto mb-2 ${
-                          paymentMethod === "card"
+                          paymentMode === "cash"
                             ? "text-blue-600"
                             : "text-gray-400"
                         }`}
                       />
                       <p
                         className={`font-medium ${
-                          paymentMethod === "card"
+                          paymentMode === "cash"
                             ? "text-blue-600"
                             : "text-gray-600"
                         }`}
                       >
-                        Card
+                        Cash
                       </p>
                     </button>
 
                     <button
-                      onClick={() => setPaymentMethod("upi")}
+                      onClick={() => setPaymentMode("cheque")}
                       className={`p-4 border-2 rounded-lg text-center ${
-                        paymentMethod === "upi"
+                        paymentMode === "cheque"
                           ? "border-blue-500 bg-blue-50"
                           : "border-gray-200"
                       }`}
                     >
                       <Smartphone
                         className={`w-8 h-8 mx-auto mb-2 ${
-                          paymentMethod === "upi"
+                          paymentMode === "cheque"
                             ? "text-blue-600"
                             : "text-gray-400"
                         }`}
                       />
                       <p
                         className={`font-medium ${
-                          paymentMethod === "upi"
+                          paymentMode === "cheque"
                             ? "text-blue-600"
                             : "text-gray-600"
                         }`}
                       >
-                        UPI
+                        Cheque
                       </p>
                     </button>
                   </div>
 
-                  {/* Card Form */}
-                  {paymentMethod === "card" && (
+                  <div className="grid grid-cols-1 gap-3 mb-6">
+                    <button
+                      onClick={() => setPaymentMode("online")}
+                      className={`p-4 border-2 rounded-lg text-center ${
+                        paymentMode === "online"
+                          ? "border-blue-500 bg-blue-50"
+                          : "border-gray-200"
+                      }`}
+                    >
+                      <Smartphone
+                        className={`w-8 h-8 mx-auto mb-2 ${
+                          paymentMode === "online"
+                            ? "text-blue-600"
+                            : "text-gray-400"
+                        }`}
+                      />
+                      <p
+                        className={`font-medium ${
+                          paymentMode === "online"
+                            ? "text-blue-600"
+                            : "text-gray-600"
+                        }`}
+                      >
+                        Online (Razorpay)
+                      </p>
+                    </button>
+                  </div>
+
+                  {/* Online Payment Method */}
+                  {paymentMode === "online" && (
+                    <div className="mb-4">
+                      <p className="text-sm font-semibold mb-2">
+                        Select Online Method
+                      </p>
+                      <div className="grid grid-cols-2 gap-3 mb-4">
+                        <button
+                          onClick={() => setGatewayMethod("card")}
+                          className={`p-3 border-2 rounded-lg text-center ${
+                            gatewayMethod === "card"
+                              ? "border-blue-500 bg-blue-50"
+                              : "border-gray-200"
+                          }`}
+                        >
+                          <CreditCard
+                            className={`w-6 h-6 mx-auto mb-1 ${
+                              gatewayMethod === "card"
+                                ? "text-blue-600"
+                                : "text-gray-400"
+                            }`}
+                          />
+                          <p
+                            className={`text-xs font-medium ${
+                              gatewayMethod === "card"
+                                ? "text-blue-600"
+                                : "text-gray-600"
+                            }`}
+                          >
+                            Card
+                          </p>
+                        </button>
+
+                        <button
+                          onClick={() => setGatewayMethod("upi")}
+                          className={`p-3 border-2 rounded-lg text-center ${
+                            gatewayMethod === "upi"
+                              ? "border-blue-500 bg-blue-50"
+                              : "border-gray-200"
+                          }`}
+                        >
+                          <Smartphone
+                            className={`w-6 h-6 mx-auto mb-1 ${
+                              gatewayMethod === "upi"
+                                ? "text-blue-600"
+                                : "text-gray-400"
+                            }`}
+                          />
+                          <p
+                            className={`text-xs font-medium ${
+                              gatewayMethod === "upi"
+                                ? "text-blue-600"
+                                : "text-gray-600"
+                            }`}
+                          >
+                            UPI
+                          </p>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Card Form for Online */}
+                  {paymentMode === "online" && gatewayMethod === "card" && (
                     <div className="space-y-4">
                       <input
                         type="text"
@@ -671,13 +848,24 @@ const Fees = ({ role }) => {
                     </div>
                   )}
 
-                  {/* UPI Form */}
-                  {paymentMethod === "upi" && (
+                  {/* UPI Form for Online */}
+                  {paymentMode === "online" && gatewayMethod === "upi" && (
                     <input
                       type="text"
                       placeholder="yourname@upi"
                       value={upiId}
                       onChange={(e) => setUpiId(e.target.value)}
+                      className="w-full px-4 py-2 border rounded-lg"
+                    />
+                  )}
+
+                  {/* Cheque Details */}
+                  {paymentMode === "cheque" && (
+                    <input
+                      type="text"
+                      placeholder="Enter cheque number"
+                      value={chequeNumber}
+                      onChange={(e) => setChequeNumber(e.target.value)}
                       className="w-full px-4 py-2 border rounded-lg"
                     />
                   )}
@@ -688,7 +876,11 @@ const Fees = ({ role }) => {
                     disabled={processing}
                     className="w-full mt-6 py-3 bg-blue-600 text-white rounded-lg disabled:opacity-50"
                   >
-                    {processing ? "Processing..." : `Pay $${selectedFee?.amount}`}
+                    {processing
+                      ? "Processing..."
+                      : paymentMode === "online"
+                      ? `Pay $${selectedFee?.amount}`
+                      : "Submit"}
                   </button>
                 </div>
               ) : (

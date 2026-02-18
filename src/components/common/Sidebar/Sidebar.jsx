@@ -27,11 +27,14 @@ const Sidebar = ({ menuItems, user, onLogout, sidebarOpen, setSidebarOpen }) => 
         </div>
 
         <div className="p-4 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 180px)' }}>
-          {sidebarOpen && (
+          {sidebarOpen && user?.role !== "admin" && (
             <div className="mb-6 p-3 bg-blue-50 rounded-lg">
               <p className="text-sm font-medium text-gray-800">{user.name}</p>
               <p className="text-xs text-gray-600 capitalize">{user.role}</p>
-              <button onClick={() => router.push(`/${user.role}/profile`)} className="mt-2 w-full flex items-center justify-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm">
+              <button
+                onClick={() => router.push(`/${user.role}/profile`)}
+                className="mt-2 w-full flex items-center justify-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm"
+              >
                 <User className="w-4 h-4" />
                 View Profile
               </button>

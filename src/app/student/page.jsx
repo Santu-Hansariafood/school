@@ -13,7 +13,7 @@ export default function StudentOverview() {
   const [student, setStudent] = useState(null)
   const [attendanceData, setAttendanceData] = useState([])
   const [results, setResults] = useState([])
-  const [feeSummary] = useState({ total: 6000, paid: 5200, pending: 800 })
+  const [feeSummary, setFeeSummary] = useState({ total: 0, paid: 0, pending: 0, lastMode: "" })
   const [issuedBooks, setIssuedBooks] = useState([])
   const [libraryStats, setLibraryStats] = useState({ totalIssued: 0, active: 0, returned: 0 })
   const [assignmentFeedback, setAssignmentFeedback] = useState({ score: 0, totalAssigned: 0, completed: 0 })
@@ -35,12 +35,13 @@ export default function StudentOverview() {
         if (!me) return
         setStudent(me)
 
-        const [attendanceRes, resultsRes, booksRes, rosterRes, holidaysRes] = await Promise.all([
+        const [attendanceRes, resultsRes, booksRes, rosterRes, holidaysRes, feesRes] = await Promise.all([
           apiClient.get(`/api/attendance?studentId=${me._id}`),
           apiClient.get(`/api/results?studentId=${me._id}`),
           apiClient.get(`/api/library/books`),
           apiClient.get(`/api/roster?class=${encodeURIComponent(me.class || "")}`),
-          apiClient.get("/api/holidays")
+          apiClient.get("/api/holidays"),
+          apiClient.get(`/api/fees?studentId=${me._id}`)
         ])
 
         setAttendanceData(attendanceRes.data || [])
@@ -52,6 +53,30 @@ export default function StudentOverview() {
 
         setClassRoster(rosterRes.data || [])
         setHolidays(holidaysRes.data || [])
+
+        const fees = Array.isArray(feesRes.data) ? feesRes.data : []
+        if (fees.length) {
+          const total = fees.reduce((sum, f) => sum + (f.amount || 0), 0)
+          const paid = fees
+            .filter((f) => f.status === "paid")
+            .reduce((sum, f) => sum + (f.amount || 0), 0)
+          const pending = total - paid
+          const lastPaid = fees
+            .filter((f) => f.status === "paid")
+            .sort((a, b) => {
+              const da = a.paidDate ? new Date(a.paidDate).getTime() : 0
+              const db = b.paidDate ? new Date(b.paidDate).getTime() : 0
+              return db - da
+            })[0]
+          setFeeSummary({
+            total,
+            paid,
+            pending,
+            lastMode: lastPaid?.paymentMode || "",
+          })
+        } else {
+          setFeeSummary({ total: 0, paid: 0, pending: 0, lastMode: "" })
+        }
 
         const [issuancesRes, assignmentsRes] = await Promise.all([
           apiClient.get(`/api/library/issuances?studentId=${me._id}`),
@@ -126,8 +151,17 @@ export default function StudentOverview() {
   const todayClasses = useMemo(() => {
     if (!classRoster.length) return []
     const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
-    const todayName = dayNames[new Date().getDay()]
+    const now = new Date()
+    const todayName = dayNames[now.getDay()]
+    const currentMonth = now.getMonth() + 1
+    const currentYear = now.getFullYear()
     return classRoster
+      .filter((entry) => {
+        if (entry.month && entry.year) {
+          return entry.month === currentMonth && entry.year === currentYear
+        }
+        return true
+      })
       .filter((entry) => entry.dayOfWeek === todayName)
       .sort((a, b) => (a.startTime || "").localeCompare(b.startTime || ""))
   }, [classRoster])
@@ -390,9 +424,21 @@ export default function StudentOverview() {
               <span className="text-orange-600">Pending</span>
               <span className="font-semibold text-orange-600">₹{feeSummary.pending}</span>
             </div>
+            {feeSummary.lastMode && (
+              <div className="flex items-center justify-between">
+                <span className="text-slate-600 text-xs">Last payment mode</span>
+                <span className="font-semibold text-slate-800 text-xs">
+                  {feeSummary.lastMode === "cash"
+                    ? "Cash"
+                    : feeSummary.lastMode === "cheque"
+                    ? "Cheque"
+                    : "Online (Razorpay)"}
+                </span>
+              </div>
+            )}
           </div>
           <p className="mt-4 text-xs text-slate-500">
-            For detailed payments and receipts, open the Fees section from the sidebar.
+            For detailed payments, receipts and online payment, open the Fees section from the sidebar.
           </p>
         </div>
       </div>

@@ -78,8 +78,17 @@ export default function TeacherOverview() {
   const todaySchedule = useMemo(() => {
     if (!roster.length) return []
     const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
-    const todayName = dayNames[new Date().getDay()]
+    const now = new Date()
+    const todayName = dayNames[now.getDay()]
+    const currentMonth = now.getMonth() + 1
+    const currentYear = now.getFullYear()
     return roster
+      .filter((entry) => {
+        if (entry.month && entry.year) {
+          return entry.month === currentMonth && entry.year === currentYear
+        }
+        return true
+      })
       .filter((entry) => entry.dayOfWeek === todayName)
       .sort((a, b) => (a.startTime || "").localeCompare(b.startTime || ""))
   }, [roster])

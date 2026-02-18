@@ -77,6 +77,11 @@ export async function POST(request) {
       dueDate,
       className,
       applyToClass,
+      paymentMode,
+      paymentDetails,
+      adminApproved,
+      adminApprovedAt,
+      receiptNumber,
     } = body || {}
 
     if (applyToClass && className) {
@@ -122,6 +127,11 @@ export async function POST(request) {
       status: body.status || "pending",
       paidDate: body.paidDate,
       transactionId: body.transactionId,
+      paymentMode,
+      paymentDetails,
+      adminApproved: Boolean(adminApproved),
+      adminApprovedAt,
+      receiptNumber,
     })
     return NextResponse.json(created, { status: 201 })
   } catch (error) {
