@@ -20,6 +20,7 @@ export default function StudentLayout({ children }) {
     { icon: FileText, label: "Assignments", path: "/student/assignments" },
     { icon: BookOpen, label: "Results", path: "/student/results" },
     { icon: BookOpen, label: "Library", path: "/student/library" },
+    { icon: FileText, label: "Question Papers", path: "/student/question-papers" },
     { icon: DollarSign, label: "Fees", path: "/student/fees" }
   ]
 
@@ -32,4 +33,3 @@ export default function StudentLayout({ children }) {
     </div>
   )
 }
-

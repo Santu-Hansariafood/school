@@ -19,6 +19,7 @@ export default function TeacherLayout({ children }) {
     { icon: Calendar, label: "Attendance", path: "/teacher/attendance" },
     { icon: FileText, label: "Assignments", path: "/teacher/assignments" },
     { icon: BookOpen, label: "Results", path: "/teacher/results" },
+    { icon: FileText, label: "Question Papers", path: "/teacher/question-papers" },
     { icon: Users, label: "Register Student", path: "/teacher/register-student" }
   ]
 

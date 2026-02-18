@@ -24,6 +24,8 @@ export default function AdminShell({ children }) {
     { icon: FileText, label: "Assignments", path: "/admin/assignments" },
     { icon: BookOpen, label: "Results", path: "/admin/results" },
     { icon: BookOpen, label: "Library", path: "/admin/library" },
+    { icon: BookOpen, label: "Subjects", path: "/admin/subjects" },
+    { icon: FileText, label: "Question Papers", path: "/admin/question-papers" },
     { icon: DollarSign, label: "Fees", path: "/admin/fees" },
     { icon: Clock, label: "Roster", path: "/admin/roster" },
     { icon: Plus, label: "Create Class", path: "/admin/classes" },

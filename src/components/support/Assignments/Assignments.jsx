@@ -9,10 +9,10 @@ const Assignments = ({ role, userId }) => {
   const [assignmentList, setAssignmentList] = useState([])
   const [showForm, setShowForm] = useState(false)
   const [currentStep, setCurrentStep] = useState(1)
-  const [newAssignment, setNewAssignment] = useState({ 
-    title: '', 
-    subject: '', 
-    dueDate: '', 
+  const [newAssignment, setNewAssignment] = useState({
+    title: '',
+    subject: '',
+    dueDate: '',
     description: '',
     assignedTo: [],
     createdBy: userId || ''
@@ -22,6 +22,7 @@ const Assignments = ({ role, userId }) => {
   const [studentsList, setStudentsList] = useState([])
   const [status, setStatus] = useState({ type: '', message: '' })
   const [answers, setAnswers] = useState({})
+  const [subjects, setSubjects] = useState([])
 
   const loadStudents = useCallback(async () => {
     try {
@@ -29,6 +30,15 @@ const Assignments = ({ role, userId }) => {
       setStudentsList(res.data || [])
     } catch (error) {
       console.error('Error loading students:', error)
+    }
+  }, [apiClient])
+
+  const loadSubjects = useCallback(async () => {
+    try {
+      const res = await apiClient.get('/api/subjects')
+      setSubjects(res.data || [])
+    } catch (error) {
+      console.error('Error loading subjects:', error)
     }
   }, [apiClient])
 
@@ -47,7 +57,8 @@ const Assignments = ({ role, userId }) => {
   useEffect(() => {
     loadStudents()
     loadAssignments()
-  }, [loadStudents, loadAssignments])
+    loadSubjects()
+  }, [loadStudents, loadAssignments, loadSubjects])
 
   const availableClasses = ['all', ...new Set(studentsList.map(s => s.class))]
 
@@ -101,10 +112,10 @@ const Assignments = ({ role, userId }) => {
   }
 
   const resetForm = () => {
-    setNewAssignment({ 
-      title: '', 
-      subject: '', 
-      dueDate: '', 
+    setNewAssignment({
+      title: '',
+      subject: '',
+      dueDate: '',
       description: '',
       assignedTo: [],
       createdBy: userId || ''
@@ -239,14 +250,19 @@ const Assignments = ({ role, userId }) => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Subject *</label>
-                    <input 
-                      type="text" 
-                      placeholder="e.g., Mathematics" 
-                      value={newAssignment.subject} 
-                      onChange={(e) => setNewAssignment({ ...newAssignment, subject: e.target.value })} 
-                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
-                    />
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Subject *</label>
+                  <select
+                    value={newAssignment.subject}
+                    onChange={(e) => setNewAssignment({ ...newAssignment, subject: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="">Select subject</option>
+                    {subjects.map((s) => (
+                      <option key={s._id} value={s.name}>
+                        {s.name}{s.class ? ` (${s.class})` : ''}
+                      </option>
+                    ))}
+                  </select>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Due Date *</label>
