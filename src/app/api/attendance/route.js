@@ -65,17 +65,57 @@ export async function POST(request) {
       return NextResponse.json({ message: "Invalid API key" }, { status: 401 })
     }
 
+    await connectDB()
     const body = await request.json()
 
-    // Support both single record and batch payloads
     const { date, class: className, records } = body
 
-    await connectDB()
+    // Support both single record and batch payloads
+
+    async function getAbsentStreakDays(studentId, date) {
+      const base = new Date(date)
+      base.setHours(0, 0, 0, 0)
+      const dates = []
+      for (let i = 0; i < 3; i += 1) {
+        const d = new Date(base)
+        d.setDate(base.getDate() - i)
+        d.setHours(0, 0, 0, 0)
+        dates.push(d)
+      }
+      const records = await Attendance.find({
+        studentId,
+        date: { $gte: dates[2], $lte: dates[0] }
+      }).lean()
+      let streak = 0
+      for (let i = 0; i < 3; i += 1) {
+        const targetTime = dates[i].getTime()
+        const record = records.find((r) => {
+          const d = new Date(r.date)
+          d.setHours(0, 0, 0, 0)
+          return d.getTime() === targetTime
+        })
+        if (record && record.status === "absent") {
+          streak += 1
+        } else {
+          break
+        }
+      }
+      return streak
+    }
 
     async function sendAbsentEmail({ student, date, className, remarks }) {
-      if (!student?.email) return
+      if (!student?.parentEmail && !student?.email) return
+      const streak = await getAbsentStreakDays(student._id, date)
+      if (streak !== 3) return
       if (process.env.NODE_ENV !== "production") {
-        console.log("[ATTENDANCE-ABSENT-NOTIFY]", student.email, date, className, remarks)
+        console.log("[ATTENDANCE-ABSENT-NOTIFY-DEV]", {
+          parentEmail: student.parentEmail,
+          studentEmail: student.email,
+          date,
+          className,
+          remarks,
+          streak
+        })
         return
       }
       const user = process.env.EMAIL_USER
@@ -85,6 +125,7 @@ export async function POST(request) {
         return
       }
       const transporter = nodemailer.createTransport({ service: "gmail", auth: { user, pass } })
+      const recipients = [student.parentEmail, student.email].filter(Boolean)
       const html = attendanceAbsentEmailTemplate({
         studentName: student.name,
         className,
@@ -95,7 +136,7 @@ export async function POST(request) {
       const text = `Absence Notification: ${student.name}${className ? ` (Class ${className})` : ""} was absent on ${new Date(date).toDateString()}` + (remarks ? `\nRemarks: ${remarks}` : "")
       await transporter.sendMail({
         from: `"School Portal" <${user}>`,
-        to: student.email,
+        to: recipients.join(","),
         subject: "Absence Notification",
         text,
         html

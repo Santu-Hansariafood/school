@@ -88,6 +88,83 @@ export function attendanceAbsentEmailTemplate({ studentName, className, date, re
 </html>`
 }
 
+export function studentRegistrationEmailTemplate({
+  studentName,
+  className,
+  studentEmail,
+  parentName,
+  parentEmail,
+  admissionDate,
+  appName = "School Portal"
+}) {
+  const admission = admissionDate ? new Date(admissionDate).toLocaleDateString() : ""
+  return `<!doctype html>
+<html lang="en">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>${appName} Student Registration</title>
+</head>
+<body style="margin:0;padding:0;background:#f8fafc;">
+  <div style="width:100%;padding:32px 0;background:#f8fafc;">
+    <div style="max-width:640px;margin:0 auto;background:#ffffff;border:1px solid #e5e7eb;border-radius:16px;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,0.04);">
+      <div style="padding:24px 28px;background:linear-gradient(135deg,#2563eb 0%,#1e40af 100%);color:#fff;">
+        <div style="display:flex;align-items:center;">
+          <div style="width:40px;height:40px;border-radius:12px;background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;margin-right:12px;">
+            <span style="font-size:22px;font-weight:800;">S</span>
+          </div>
+          <div style="font-size:18px;font-weight:700;letter-spacing:0.2px;">${appName} • New Student Registration</div>
+        </div>
+      </div>
+      <div style="padding:28px;">
+        <p style="margin:0 0 12px 0;font-size:14px;color:#4b5563;font-family:Inter,Segoe UI,Arial,sans-serif;">
+          Dear Parent/Guardian${parentName ? ` (${parentName})` : ""},
+        </p>
+        <p style="margin:0 0 16px 0;font-size:14px;color:#334155;font-family:Inter,Segoe UI,Arial,sans-serif;">
+          We are pleased to inform you that the following student has been successfully registered at ${appName}.
+        </p>
+        <div style="margin:18px 0;padding:16px 18px;border-radius:12px;background:#f9fafb;border:1px solid #e5e7eb;">
+          <table style="width:100%;border-collapse:collapse;font-size:13px;color:#111827;">
+            <tbody>
+              <tr>
+                <td style="padding:6px 8px;color:#6b7280;width:40%;">Student Name</td>
+                <td style="padding:6px 8px;font-weight:600;">${studentName}</td>
+              </tr>
+              <tr>
+                <td style="padding:6px 8px;color:#6b7280;">Class</td>
+                <td style="padding:6px 8px;">${className || "-"}</td>
+              </tr>
+              <tr>
+                <td style="padding:6px 8px;color:#6b7280;">Student Login Email</td>
+                <td style="padding:6px 8px;">${studentEmail}</td>
+              </tr>
+              <tr>
+                <td style="padding:6px 8px;color:#6b7280;">Parent/Guardian Email</td>
+                <td style="padding:6px 8px;">${parentEmail}</td>
+              </tr>
+              <tr>
+                <td style="padding:6px 8px;color:#6b7280;">Admission Date</td>
+                <td style="padding:6px 8px;">${admission || "-"}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p style="margin:0 0 10px 0;font-size:13px;color:#4b5563;font-family:Inter,Segoe UI,Arial,sans-serif;">
+          Please keep this information for your records. The student can access the portal using the registered email address.
+        </p>
+        <p style="margin:0;font-size:13px;color:#64748b;font-family:Inter,Segoe UI,Arial,sans-serif;">
+          If any of the above details are incorrect, kindly contact the school administration for corrections.
+        </p>
+      </div>
+      <div style="padding:18px 28px;border-top:1px solid #f1f5f9;background:#fafafa;">
+        <p style="margin:0;font-size:12px;color:#6b7280;font-family:Inter,Segoe UI,Arial,sans-serif;">© ${new Date().getFullYear()} ${appName}. All rights reserved.</p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>`
+}
+
 export function marksheetEmailTemplate({ studentName, className, term, results, average, overallGrade, appName = "School Portal" }) {
   const safeResults = Array.isArray(results) ? results : []
   const rows = safeResults.map((r, idx) => {

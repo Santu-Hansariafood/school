@@ -2,6 +2,8 @@ import { NextResponse } from "next/server"
 import { connectDB } from "@/lib/mongodb"
 import Student from "@/models/Student"
 import User from "@/models/User"
+import nodemailer from "nodemailer"
+import { studentRegistrationEmailTemplate } from "@/lib/emailTemplates"
 
 export async function GET(request) {
   try {
@@ -92,6 +94,59 @@ export async function POST(request) {
       { $setOnInsert: { username: email }, $set: { name, role: "student", email } },
       { upsert: true }
     )
+
+    try {
+      if (student.parentEmail) {
+        if (process.env.NODE_ENV !== "production") {
+          console.log("[STUDENT-REGISTER-EMAIL-DEV]", {
+            parentEmail: student.parentEmail,
+            studentEmail: student.email,
+            studentName: student.name,
+            className: student.class
+          })
+        } else {
+          const userEmail = process.env.EMAIL_USER
+          const userPass = process.env.EMAIL_PASS
+          if (userEmail && userPass) {
+            const transporter = nodemailer.createTransport({
+              service: "gmail",
+              auth: { user: userEmail, pass: userPass }
+            })
+
+            const html = studentRegistrationEmailTemplate({
+              studentName: student.name,
+              className: student.class,
+              studentEmail: student.email,
+              parentName: student.parentName,
+              parentEmail: student.parentEmail,
+              admissionDate: student.admissionDate,
+              appName: "School Portal"
+            })
+
+            const textLines = [
+              `Student Name: ${student.name}`,
+              `Class: ${student.class || "-"}`,
+              `Student Login Email: ${student.email}`,
+              `Parent/Guardian Email: ${student.parentEmail}`,
+              `Admission Date: ${student.admissionDate || "-"}`
+            ]
+
+            await transporter.sendMail({
+              from: `"School Portal" <${userEmail}>`,
+              to: student.parentEmail,
+              cc: student.email,
+              subject: "Student Registration Confirmation",
+              text: textLines.join("\n"),
+              html
+            })
+          } else {
+            console.warn("Email credentials not configured; skipping student registration email")
+          }
+        }
+      }
+    } catch (emailError) {
+      console.error("Error sending student registration email:", emailError)
+    }
 
     return NextResponse.json(student, { status: 201 })
   } catch (error) {

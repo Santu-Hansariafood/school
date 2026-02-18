@@ -3,6 +3,7 @@ import { connectDB } from "@/lib/mongodb"
 import Result from "@/models/Result"
 import Student from "@/models/Student"
 import nodemailer from "nodemailer"
+import PDFDocument from "pdfkit"
 import { marksheetEmailTemplate } from "@/lib/emailTemplates"
 
 function gradeForMarks(marks) {
@@ -12,6 +13,71 @@ function gradeForMarks(marks) {
   if (marks >= 60) return "B"
   if (marks >= 50) return "C"
   return "F"
+}
+
+function createMarksheetPdfBuffer({ student, results, average, overallGrade }) {
+  return new Promise((resolve, reject) => {
+    const doc = new PDFDocument({ size: "A4", margin: 50 })
+    const chunks = []
+
+    doc.on("data", (chunk) => chunks.push(chunk))
+    doc.on("end", () => resolve(Buffer.concat(chunks)))
+    doc.on("error", (err) => reject(err))
+
+    doc.fontSize(20).text("School Portal", { align: "center" })
+    doc.moveDown(0.5)
+    doc.fontSize(14).text("Provisional Marksheet", { align: "center" })
+    doc.moveDown()
+
+    doc.fontSize(12)
+    doc.text(`Student Name: ${student.name}`)
+    if (student.class) {
+      doc.text(`Class: ${student.class}`)
+    }
+    doc.text(`Average: ${average}%`)
+    doc.text(`Overall Grade: ${overallGrade}`)
+
+    doc.moveDown()
+    doc.fontSize(12).text("Subject-wise Details")
+    doc.moveDown(0.5)
+
+    const startY = doc.y
+    const subjectX = 50
+    const totalX = 260
+    const marksX = 320
+    const percentX = 380
+    const gradeX = 440
+
+    doc.fontSize(11).font("Helvetica-Bold")
+    doc.text("Subject", subjectX, startY)
+    doc.text("Total", totalX, startY)
+    doc.text("Marks", marksX, startY)
+    doc.text("%", percentX, startY)
+    doc.text("Grade", gradeX, startY)
+
+    let y = startY + 18
+    doc.font("Helvetica")
+
+    results.forEach((r) => {
+      const marks = typeof r.marks === "number" ? r.marks : 0
+      const grade = r.grade || gradeForMarks(marks)
+      const percent = marks
+
+      doc.text(r.subject || "-", subjectX, y)
+      doc.text("100", totalX, y)
+      doc.text(String(marks), marksX, y)
+      doc.text(String(percent), percentX, y)
+      doc.text(grade, gradeX, y)
+
+      y += 18
+      if (y > 760) {
+        doc.addPage()
+        y = 60
+      }
+    })
+
+    doc.end()
+  })
 }
 
 export async function POST(request) {
@@ -32,8 +98,10 @@ export async function POST(request) {
     if (!student) {
       return NextResponse.json({ message: "Student not found" }, { status: 404 })
     }
-    if (!student.email) {
-      return NextResponse.json({ message: "Student has no registered email" }, { status: 400 })
+
+    const recipients = [student.parentEmail, student.email].filter(Boolean)
+    if (!recipients.length) {
+      return NextResponse.json({ message: "Student has no registered email addresses" }, { status: 400 })
     }
 
     const results = await Result.find({ studentId }).sort({ subject: 1 }).lean()
@@ -46,7 +114,7 @@ export async function POST(request) {
     const overallGrade = gradeForMarks(average)
 
     if (process.env.NODE_ENV !== "production") {
-      console.log("[MARKSHEET-EMAIL-DEV]", student.email, {
+      console.log("[MARKSHEET-EMAIL-DEV]", recipients, {
         studentName: student.name,
         className: student.class,
         average,
@@ -84,12 +152,26 @@ export async function POST(request) {
       `Average: ${average}%  Grade: ${overallGrade}\n\n` +
       lines
 
+    const pdfBuffer = await createMarksheetPdfBuffer({
+      student,
+      results,
+      average,
+      overallGrade
+    })
+
     await transporter.sendMail({
       from: `"School Portal" <${user}>`,
-      to: student.email,
+      to: recipients.join(","),
       subject: "Your Academic Marksheet",
       text,
-      html
+      html,
+      attachments: [
+        {
+          filename: `Marksheet-${student.name}.pdf`,
+          content: pdfBuffer,
+          contentType: "application/pdf"
+        }
+      ]
     })
 
     return NextResponse.json({ message: "Marksheet emailed" }, { status: 200 })
@@ -98,4 +180,3 @@ export async function POST(request) {
     return NextResponse.json({ message: "Internal server error" }, { status: 500 })
   }
 }
-
