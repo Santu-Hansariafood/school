@@ -11,15 +11,10 @@ function parseAllowedAdmins() {
 
 async function ensureAllowedAndFetch({ role, email }) {
   const normalizedEmail = (email || "").toLowerCase()
-  await connectDB()
 
   if (role === "admin") {
     const allowed = parseAllowedAdmins()
-    if (!allowed.includes(normalizedEmail)) {
-      return { allowed: false, user: null }
-    }
-    const user = await User.findOne({ email: normalizedEmail, role: "admin" }).lean()
-    return { allowed: !!user, user }
+    return { allowed: allowed.includes(normalizedEmail), user: null }
   }
 
   const user = await User.findOne({ email: normalizedEmail, role }).lean()
@@ -38,6 +33,8 @@ export async function POST(request) {
     if (!email || !role || !otp || !["admin", "teacher", "student"].includes(role)) {
       return NextResponse.json({ message: "Email, role and OTP are required" }, { status: 400 })
     }
+
+    await connectDB()
 
     const { allowed, user } = await ensureAllowedAndFetch({ role, email })
     if (!allowed) {
@@ -58,23 +55,20 @@ export async function POST(request) {
 
     await AdminOTP.deleteMany({ email })
 
-    if (!user) {
-      return NextResponse.json({ message: "User not found" }, { status: 404 })
-    }
-
     let safeUser
     if (role === "admin") {
-      if (user.role !== "admin") {
-        return NextResponse.json({ message: "Unauthorized role" }, { status: 403 })
-      }
+      const normalizedEmail = email.toLowerCase()
       safeUser = {
-        id: user._id.toString(),
-        username: user.username,
-        name: user.name,
+        id: `admin:${normalizedEmail}`,
+        username: normalizedEmail,
+        name: "Admin",
         role: "admin",
-        email: user.email
+        email: normalizedEmail
       }
     } else {
+      if (!user) {
+        return NextResponse.json({ message: "User not found" }, { status: 404 })
+      }
       safeUser = {
         id: user._id.toString(),
         username: user.username,
