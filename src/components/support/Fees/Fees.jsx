@@ -30,6 +30,7 @@ const Fees = ({ role }) => {
   const [newFeeAmount, setNewFeeAmount] = useState("");
   const [newFeeDueDate, setNewFeeDueDate] = useState("");
   const [creatingFee, setCreatingFee] = useState(false);
+  const [adminCollectionMode, setAdminCollectionMode] = useState("cash");
 
   const [cardDetails, setCardDetails] = useState({
     number: "",
@@ -344,6 +345,83 @@ const Fees = ({ role }) => {
         )}
       </div>
 
+      {role === "admin" && selectedStudentObj && (
+        <div className="mb-6 bg-white rounded-xl shadow-md border border-gray-100 p-4">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+              <h2 className="text-lg font-semibold text-gray-800">Selected Student</h2>
+              <div className="mt-2 grid grid-cols-1 md:grid-cols-3 gap-2 text-sm text-gray-700">
+                <div>
+                  <p className="text-xs text-gray-500">Name</p>
+                  <p className="font-medium">{selectedStudentObj.name}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">Class</p>
+                  <p className="font-medium">{selectedStudentObj.class}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">Email</p>
+                  <p className="font-medium break-all">{selectedStudentObj.email}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">Parent Name</p>
+                  <p className="font-medium">{selectedStudentObj.parentName}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">Parent Phone</p>
+                  <p className="font-medium">{selectedStudentObj.parentPhone}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">Parent Email</p>
+                  <p className="font-medium break-all">{selectedStudentObj.parentEmail}</p>
+                </div>
+              </div>
+            </div>
+            <div className="md:w-64">
+              <p className="text-xs font-semibold text-gray-600 mb-2">Collection Mode</p>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => setAdminCollectionMode("cash")}
+                  className={`px-3 py-2 rounded-lg text-xs font-medium border ${
+                    adminCollectionMode === "cash"
+                      ? "bg-emerald-50 border-emerald-500 text-emerald-700"
+                      : "bg-gray-50 border-gray-300 text-gray-700"
+                  }`}
+                >
+                  Cash
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAdminCollectionMode("cheque")}
+                  className={`px-3 py-2 rounded-lg text-xs font-medium border ${
+                    adminCollectionMode === "cheque"
+                      ? "bg-emerald-50 border-emerald-500 text-emerald-700"
+                      : "bg-gray-50 border-gray-300 text-gray-700"
+                  }`}
+                >
+                  Cheque
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAdminCollectionMode("online")}
+                  className={`px-3 py-2 rounded-lg text-xs font-medium border ${
+                    adminCollectionMode === "online"
+                      ? "bg-emerald-50 border-emerald-500 text-emerald-700"
+                      : "bg-gray-50 border-gray-300 text-gray-700"
+                  }`}
+                >
+                  Online
+                </button>
+              </div>
+              <p className="mt-2 text-[11px] text-gray-500">
+                Selected mode will be used when marking pending fees as paid.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <div className="bg-gradient-to-br from-blue-500 to-blue-600 p-6 rounded-xl text-white shadow-md">
@@ -540,6 +618,16 @@ const Fees = ({ role }) => {
                           <button
                             onClick={async () => {
                               try {
+                                if (fee.status !== "paid" && !fee.paymentMode) {
+                                  const body = {
+                                    paymentMode: adminCollectionMode,
+                                    paidDate: new Date().toISOString(),
+                                  };
+                                  await apiClient.put(
+                                    `/api/fees/${fee._id}`,
+                                    body
+                                  );
+                                }
                                 const res = await apiClient.post(
                                   `/api/fees/${fee._id}/approve`,
                                   {
