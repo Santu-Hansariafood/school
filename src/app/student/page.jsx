@@ -440,6 +440,12 @@ export default function StudentOverview() {
           <p className="mt-4 text-xs text-slate-500">
             For detailed payments, receipts and online payment, open the Fees section from the sidebar.
           </p>
+          <button
+            onClick={() => router.push("/student/fees")}
+            className="mt-4 w-full px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition"
+          >
+            Pay Fees (Cash / Cheque / Online)
+          </button>
         </div>
       </div>
 

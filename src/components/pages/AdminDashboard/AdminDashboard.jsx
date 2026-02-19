@@ -636,7 +636,7 @@ const AdminDashboard = ({ user, onLogout }) => {
     { icon: FileText, label: 'Assignments', path: '/admin/assignments' },
     { icon: BookOpen, label: 'Results', path: '/admin/results' },
     { icon: BookOpen, label: 'Library', path: '/admin/library' },
-    { icon: DollarSign, label: 'Fees', path: '/admin/fees' },
+    { icon: DollarSign, label: 'Collect Fees', path: '/admin/fees' },
     { icon: Users, label: 'Assign Students', path: '/admin/assign' },
     { icon: UserPlus, label: 'Register Student', path: '/admin/register-student' },
     { icon: UserPlus, label: 'Register Teacher', path: '/admin/register-teacher' },

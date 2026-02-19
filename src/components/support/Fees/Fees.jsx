@@ -311,7 +311,9 @@ const Fees = ({ role }) => {
       className="max-w-6xl"
     >
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-3xl font-bold text-gray-800">Fee Management</h1>
+        <h1 className="text-3xl font-bold text-gray-800">
+          {role === "admin" ? "Collect Fees" : "Fee Management"}
+        </h1>
 
         {role !== "student" && (
         <div className="flex items-center gap-3">
